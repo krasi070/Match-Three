@@ -1,48 +1,71 @@
 ﻿using System;
+using System.Collections;
 using UnityEngine;
 
 public class Tile : MonoBehaviour
 {
+    public event Action<Tile> OnMouseHover;
     public event Action<Tile> OnMouseClick;
+    public event Action<Tile> OnMouseExitHover;
+    public event Action AfterSwap;
 
-    public Vector2Int Coordinates { get; set; }
+    private TileType _type;
 
-    private const string selectEffectName = "SelectEffect";
-    private const string hoverEffectName = "HoverEffect";
+    public Vector2Int Position { get; set; }
+
+    public TileType Type
+    {
+        get
+        {
+            return _type;
+        }
+        set
+        {
+            name = value.ToString();
+            _type = value;
+        }
+    }
+
+    public void Init(Vector2Int position, TileType type)
+    {
+        Position = position;
+        Type = type;
+    }
+
+    public void MoveToPosition(Vector3 target, float duration)
+    {
+        StartCoroutine(Move(target, duration));
+    }
+
+    private IEnumerator Move(Vector3 target, float duration)
+    {
+        float currTime = 0f;
+
+        while ((transform.position - target).sqrMagnitude != 0)
+        {
+            currTime += Time.deltaTime;
+            float interpolant = currTime / duration;
+            transform.position = Vector3.Lerp(transform.position, target, interpolant);
+
+            yield return null;
+        }
+
+        transform.position = new Vector3(transform.position.x, transform.position.y, 0f);
+        AfterSwap?.Invoke();
+    }
 
     private void OnMouseDown()
     {
-        if (transform.childCount > 0)
-        {
-            GameObject child = transform.GetChild(0).gameObject;
-            child.name = selectEffectName;
-
-            SpriteRenderer renderer = child.GetComponent<SpriteRenderer>();
-            renderer.color = Color.white;
-        }
-
         OnMouseClick?.Invoke(this);
     }
 
-    private void OnMouseEnter()
+    private void OnMouseOver()
     {
-        if (transform.childCount == 0)
-        {
-            GameObject hoverEffect = new GameObject(hoverEffectName);
-            SpriteRenderer renderer = hoverEffect.AddComponent<SpriteRenderer>();
-            renderer.sprite = Resources.Load<Sprite>("Sprites/select");
-            renderer.color = new Color(1, 1, 1, 0.5f);
-
-            hoverEffect.transform.position = transform.position + Vector3.forward;
-            hoverEffect.transform.parent = transform;
-        }
+        OnMouseHover?.Invoke(this);
     }
 
     private void OnMouseExit()
     {
-        if (transform.childCount > 0 && transform.GetChild(0).name == hoverEffectName)
-        {
-            Destroy(transform.GetChild(0).gameObject);
-        }
+        OnMouseExitHover?.Invoke(this);
     }
 }
