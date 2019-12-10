@@ -1,12 +1,30 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 public class Tile : MonoBehaviour
 {
+    public event Action<Tile> OnMouseClick;
+
     public Vector2Int Coordinates { get; set; }
 
+    private const string selectEffectName = "SelectEffect";
     private const string hoverEffectName = "HoverEffect";
 
-    private void OnMouseOver()
+    private void OnMouseDown()
+    {
+        if (transform.childCount > 0)
+        {
+            GameObject child = transform.GetChild(0).gameObject;
+            child.name = selectEffectName;
+
+            SpriteRenderer renderer = child.GetComponent<SpriteRenderer>();
+            renderer.color = Color.white;
+        }
+
+        OnMouseClick?.Invoke(this);
+    }
+
+    private void OnMouseEnter()
     {
         if (transform.childCount == 0)
         {
@@ -22,7 +40,7 @@ public class Tile : MonoBehaviour
 
     private void OnMouseExit()
     {
-        if (transform.GetChild(0).name == hoverEffectName)
+        if (transform.childCount > 0 && transform.GetChild(0).name == hoverEffectName)
         {
             Destroy(transform.GetChild(0).gameObject);
         }

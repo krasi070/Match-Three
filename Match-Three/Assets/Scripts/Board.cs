@@ -5,6 +5,7 @@ public class Board : MonoBehaviour
     public int rows;
     public int columns;
 
+    private Tile _selectedTile;
     private Tile[,] _tiles;
 
     private TileType[] _types = new TileType[]
@@ -37,6 +38,7 @@ public class Board : MonoBehaviour
 
                 _tiles[row, col] = tile.AddComponent<Tile>();
                 _tiles[row, col].Coordinates = new Vector2Int(col, row);
+                _tiles[row, col].OnMouseClick += SelectTile;
 
                 SpriteRenderer renderer = tile.AddComponent<SpriteRenderer>();
                 renderer.sprite = Resources.Load<Sprite>($"Sprites/{randomType.ToString().ToLower()}");
@@ -56,5 +58,16 @@ public class Board : MonoBehaviour
         }
 
         Camera.main.orthographicSize = rows * (height / 2) * 1.1f;
+    }
+
+    private void SelectTile(Tile tile)
+    {
+        if (_selectedTile != null && _selectedTile.transform.childCount > 0)
+        {
+            Destroy(_selectedTile.transform.GetChild(0).gameObject);
+        }
+
+        _selectedTile = tile;
+        Debug.Log($"Position: {tile.Coordinates.x}, {tile.Coordinates.y}");
     }
 }
