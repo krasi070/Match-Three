@@ -22,6 +22,10 @@ public class Tile : MonoBehaviour
         set
         {
             name = value.ToString();
+
+            SpriteRenderer renderer = GetComponent<SpriteRenderer>();
+            renderer.sprite = Resources.Load<Sprite>($"Sprites/{value.ToString().ToLower()}");
+
             _type = value;
         }
     }

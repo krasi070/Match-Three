@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 
 public class Board : MonoBehaviour
 {
@@ -27,6 +29,8 @@ public class Board : MonoBehaviour
     private void Start()
     {
         InitTiles();
+        RemoveHorizontalMatches();
+        RemoveVerticalMatches();
     }
 
     private void InitTiles()
@@ -41,13 +45,11 @@ public class Board : MonoBehaviour
             {
                 TileType randomType = _types[Random.Range(0, _types.Length)];
                 GameObject tile = new GameObject();
+                SpriteRenderer renderer = tile.AddComponent<SpriteRenderer>();
 
                 _tiles[row, col] = tile.AddComponent<Tile>();
                 _tiles[row, col].Init(new Vector2Int(col, row), randomType);
                 AddEventsToTile(_tiles[row, col]);
-
-                SpriteRenderer renderer = tile.AddComponent<SpriteRenderer>();
-                renderer.sprite = Resources.Load<Sprite>($"Sprites/{randomType.ToString().ToLower()}");
 
                 height = renderer.bounds.size.y;
                 width = renderer.bounds.size.x;
@@ -159,5 +161,81 @@ public class Board : MonoBehaviour
         {
             Destroy(tile.transform.GetChild(0).gameObject);
         }
+    }
+
+    private void RemoveHorizontalMatches()
+    {
+        for (int row = 0; row < rows; row++)
+        {
+            int counter = 0;
+            TileType type = TileType.Apple;
+
+            for (int col = 0; col < columns; col++)
+            {
+                if (type == _tiles[row, col].Type)
+                {
+                    counter++;
+                }
+                else
+                {
+                    type = _tiles[row, col].Type;
+                    counter = 1;
+                }
+
+                if (counter > 2)
+                {
+                    _tiles[row, col].Type = GetNewRandomType(row, col);
+                    counter = 0;
+                }
+            }
+        }
+    }
+
+    private void RemoveVerticalMatches()
+    {
+        for (int col = 0; col < columns; col++)
+        {
+            int counter = 0;
+            TileType type = TileType.Apple;
+
+            for (int row = 0; row < rows; row++)
+            {
+                if (type == _tiles[row, col].Type)
+                {
+                    counter++;
+                }
+                else
+                {
+                    type = _tiles[row, col].Type;
+                    counter = 1;
+                }
+
+                if (counter > 2)
+                {
+                    _tiles[row, col].Type = GetNewRandomType(row, col);
+                    counter = 0;
+                }
+            }
+        }
+    }
+
+    private TileType GetNewRandomType(int row, int col)
+    {
+        List<TileType> availableTypes = System.Enum.GetValues(typeof(TileType))
+                        .Cast<TileType>()
+                        .ToList();
+
+        for (int i = Mathf.Max(0, row - 1); i <= Mathf.Min(rows - 1, row + 1); i++)
+        {
+            for (int j = Mathf.Max(0, col - 1); j <= Mathf.Min(columns - 1, col + 1); j++)
+            {
+                if ((_tiles[row, col].Position - _tiles[i, j].Position).sqrMagnitude <= 1)
+                {
+                    availableTypes.Remove(_tiles[i, j].Type);
+                }
+            }
+        }
+
+        return availableTypes[Random.Range(0, availableTypes.Count)];
     }
 }
