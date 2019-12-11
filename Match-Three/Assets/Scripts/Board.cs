@@ -7,6 +7,7 @@ public class Board : MonoBehaviour
     public int rows;
     public int columns;
     public float swapDuration;
+    public float fallDurationPerTile;
 
     private const string SelectEffectName = "SelectEffect";
     private const string HoverEffectName = "HoverEffect";
@@ -24,53 +25,100 @@ public class Board : MonoBehaviour
         TileType.Orange
     };
 
-    private bool _swapping;
+    private float _tileHeight;
+    private float _tileWidth;
+
+    private BoardState _state;
+    private int _destroyedTiles;
+
+    // This is a flag that is toggled to false after the first tile finishes swapping and then 
+    // toggled again to true after the second tile finishes swapping.
+    private bool _bothTilesSwapped = true;
 
     private void Start()
     {
+        SetTileDimensions();
         InitTiles();
-        RemoveHorizontalMatches();
-        RemoveVerticalMatches();
+        RemoveHorizontalMatchesAfterInit();
+        RemoveVerticalMatchesAfterInit();
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            for (int i = 0; i < columns; i++)
+            {
+                for (int j = 0; j < rows; j++)
+                {
+                    Debug.Log($"({i}, {j}): type({_tiles[j, i].Type.ToString()}) null({_tiles[j, i] == null}) toBeDestroyed({_tiles[j, i].ToBeDestroyed})");
+                }
+            }
+        }
     }
 
     private void InitTiles()
     {
-        float height = 1f;
-        float width = 1f;
-
         _tiles = new Tile[rows, columns];
+
         for (int row = 0; row < rows; row++)
         {
             for (int col = 0; col < columns; col++)
             {
-                TileType randomType = _types[Random.Range(0, _types.Length)];
-                GameObject tile = new GameObject();
-                SpriteRenderer renderer = tile.AddComponent<SpriteRenderer>();
-
-                _tiles[row, col] = tile.AddComponent<Tile>();
-                _tiles[row, col].Init(new Vector2Int(col, row), randomType);
-                AddEventsToTile(_tiles[row, col]);
-
-                height = renderer.bounds.size.y;
-                width = renderer.bounds.size.x;
-
-                BoxCollider2D collider = tile.AddComponent<BoxCollider2D>();
-                collider.size = new Vector2(width - width * 0.05f, height - height * 0.05f);
-
-                float startX = -width * (rows - 1) / 2;
-                float startY = -height * (columns - 1) / 2;
-                tile.transform.position = new Vector3(startX + col * width, startY + row * height, 0);
-
-                tile.transform.parent = transform;
+                _tiles[row, col] = CreateTile(row, col);
             }
         }
 
-        Camera.main.orthographicSize = rows * (height / 2) * 1.1f;
+        Camera.main.orthographicSize = rows * 1.1f;
+    }
+
+    private Tile CreateTile(int row, int col)
+    {
+        return CreateTile(row, col, 0);
+    }
+
+    private Tile CreateTile(int row, int col, float yOffset)
+    {
+        TileType randomType = _types[Random.Range(0, _types.Length)];
+        GameObject tileObj = new GameObject();
+        SpriteRenderer renderer = tileObj.AddComponent<SpriteRenderer>();
+
+        Tile tile = tileObj.AddComponent<Tile>();
+        tile.Init(new Vector2Int(col, row), randomType);
+        AddEventsToTile(tile);
+
+        BoxCollider2D collider = tileObj.AddComponent<BoxCollider2D>();
+        collider.size = new Vector2(_tileWidth - _tileWidth * 0.05f, _tileHeight - _tileHeight * 0.05f);
+
+        tileObj.transform.position = GetTileWorldPosition(row, col, yOffset);
+        tileObj.transform.parent = transform;
+
+        return tile;
+    }
+
+    private Vector3 GetTileWorldPosition(int row, int col)
+    {
+        return GetTileWorldPosition(row, col, 0);
+    }
+
+    private Vector3 GetTileWorldPosition(int row, int col, float yOffset)
+    {
+        float startX = -_tileWidth * (rows - 1) / 2;
+        float startY = -_tileHeight * (columns - 1) / 2;
+
+        return new Vector3(startX + col * _tileWidth, startY + (row + yOffset) * _tileHeight);
+    }
+
+    private void SetTileDimensions()
+    {
+        Sprite sprite = Resources.Load<Sprite>($"Sprites/{TileType.Apple}");
+        _tileWidth = sprite.bounds.size.x;
+        _tileHeight = sprite.bounds.size.y;
     }
 
     private void SelectTile(Tile tile)
     {
-        if (!_swapping)
+        if (_state == BoardState.InPlay)
         {
             if (_selectedTile != null && _selectedTile.transform.childCount > 0)
             {
@@ -109,7 +157,7 @@ public class Board : MonoBehaviour
 
     private void SwapTiles(Tile toSwap)
     {
-        _swapping = true;
+        _state = BoardState.SwappingTiles;
 
         Vector3 selectedTilePos = _selectedTile.transform.position;
         _selectedTile.MoveToPosition(toSwap.transform.position + Vector3.back, swapDuration);
@@ -128,22 +176,19 @@ public class Board : MonoBehaviour
         return (_selectedTile.Position - tile.Position).sqrMagnitude <= 1;
     }
 
-    private void SetSwappingToOff()
-    {
-        _swapping = false;
-    }
-
     private void AddEventsToTile(Tile tile)
     {
         tile.OnMouseClick += SelectTile;
         tile.OnMouseHover += AddHoverEffect;
         tile.OnMouseExitHover += RemoveHoverEffect;
-        tile.AfterSwap += SetSwappingToOff;
+        tile.AfterMove += () => { _state = BoardState.InPlay; };
+        tile.AfterMove += RemoveMatchedTiles;
+        tile.AfterDisappear += DropTiles;
     }
 
     private void AddHoverEffect(Tile tile)
     {
-        if (tile.transform.childCount == 0 && !_swapping)
+        if (tile.transform.childCount == 0 && _state == BoardState.InPlay)
         {
             GameObject hoverEffect = new GameObject(HoverEffectName);
             SpriteRenderer renderer = hoverEffect.AddComponent<SpriteRenderer>();
@@ -163,7 +208,163 @@ public class Board : MonoBehaviour
         }
     }
 
-    private void RemoveHorizontalMatches()
+    private void RemoveMatchedTiles()
+    {
+        _bothTilesSwapped = !_bothTilesSwapped;
+
+        if (_bothTilesSwapped)
+        {
+            IEnumerable<Tile> matches = GetHorizontalMatches().Union(GetVerticalMatches());
+
+            _destroyedTiles = matches.Count();
+
+            if (_destroyedTiles > 0)
+            {
+                _state = BoardState.RemovingTiles;
+
+                foreach (Tile tile in matches)
+                {
+                    tile.Disappear();
+                }
+            }
+        }
+    }
+
+    private void DropTiles()
+    {
+        while (_destroyedTiles > 0)
+        {
+            _destroyedTiles--;
+        }
+
+        _state = BoardState.DroppingTiles;
+
+        for (int col = 0; col < columns; col++)
+        {
+            Queue<Vector2Int> emptyTiles = new Queue<Vector2Int>();
+
+            for (int row = 0; row < rows; row++)
+            {
+                if (_tiles[row, col].ToBeDestroyed)
+                {
+                    emptyTiles.Enqueue(new Vector2Int(col, row));
+                }
+                else if (emptyTiles.Count > 0)
+                {
+                    emptyTiles.Enqueue(new Vector2Int(col, row));
+
+                    Vector2Int newPosition = emptyTiles.Dequeue();
+                    _tiles[newPosition.y, newPosition.x] = _tiles[row, col];
+                    _tiles[newPosition.y, newPosition.x].Position = newPosition;
+
+                    int distance = row - newPosition.y;
+                    _tiles[newPosition.y, newPosition.x].MoveToPosition(
+                        GetTileWorldPosition(newPosition.y, newPosition.x), 
+                        fallDurationPerTile * distance);
+
+                    _tiles[row, col] = null;
+                }
+            }
+
+            int numberOfNewTiles = emptyTiles.Count;
+
+            while (emptyTiles.Count > 0)
+            {
+                Vector2Int position = emptyTiles.Dequeue();
+
+                _tiles[position.y, position.x] = CreateTile(position.y, position.x, numberOfNewTiles);
+                _tiles[position.y, position.x].MoveToPosition(
+                    GetTileWorldPosition(position.y, position.x), 
+                    fallDurationPerTile * numberOfNewTiles);
+            }
+        }
+    }
+
+    private ICollection<Tile> GetHorizontalMatches()
+    {
+        ICollection<Tile> matchedTiles = new List<Tile>();
+
+        for (int row = 0; row < rows; row++)
+        {
+            int counter = 0;
+            TileType type = TileType.Apple;
+
+            for (int col = 0; col < columns; col++)
+            {
+                if (type == _tiles[row, col].Type)
+                {
+                    counter++;
+                }
+                else
+                {
+                    type = _tiles[row, col].Type;
+                    counter = 1;
+                }
+
+                if (counter == 3)
+                {
+                    matchedTiles.Add(_tiles[row, col - 2]);
+                    matchedTiles.Add(_tiles[row, col - 1]);
+                    matchedTiles.Add(_tiles[row, col]);
+
+                    _tiles[row, col - 2].ToBeDestroyed = true;
+                    _tiles[row, col - 1].ToBeDestroyed = true;
+                    _tiles[row, col].ToBeDestroyed = true;
+                }
+                else if (counter > 3)
+                {
+                    matchedTiles.Add(_tiles[row, col]);
+                    _tiles[row, col].ToBeDestroyed = true;
+                }
+            }
+        }
+
+        return matchedTiles;
+    }
+
+    private ICollection<Tile> GetVerticalMatches()
+    {
+        ICollection<Tile> matchedTiles = new List<Tile>();
+
+        for (int col = 0; col < columns; col++)
+        {
+            int counter = 0;
+            TileType type = TileType.Apple;
+
+            for (int row = 0; row < rows; row++)
+            {
+                if (type == _tiles[row, col].Type)
+                {
+                    counter++;
+                }
+                else
+                {
+                    type = _tiles[row, col].Type;
+                    counter = 1;
+                }
+
+                if (counter == 3)
+                {
+                    matchedTiles.Add(_tiles[row - 2, col]);
+                    matchedTiles.Add(_tiles[row - 1, col]);
+                    matchedTiles.Add(_tiles[row, col]);
+
+                    _tiles[row - 2, col].ToBeDestroyed = true;
+                    _tiles[row - 1, col].ToBeDestroyed = true;
+                    _tiles[row, col].ToBeDestroyed = true;
+                }
+                else if (counter > 3)
+                {
+                    matchedTiles.Add(_tiles[row, col]);
+                    _tiles[row, col].ToBeDestroyed = true;
+                }
+            }
+        }
+
+        return matchedTiles;
+    }
+
+    private void RemoveHorizontalMatchesAfterInit()
     {
         for (int row = 0; row < rows; row++)
         {
@@ -191,7 +392,7 @@ public class Board : MonoBehaviour
         }
     }
 
-    private void RemoveVerticalMatches()
+    private void RemoveVerticalMatchesAfterInit()
     {
         for (int col = 0; col < columns; col++)
         {

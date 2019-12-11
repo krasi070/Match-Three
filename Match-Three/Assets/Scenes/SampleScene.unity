@@ -166,7 +166,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   rows: 7
   columns: 7
-  swapDuration: 0.75
+  swapDuration: 0.25
+  fallDurationPerTile: 0.2
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0

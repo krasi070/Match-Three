@@ -7,9 +7,12 @@ public class Tile : MonoBehaviour
     public event Action<Tile> OnMouseHover;
     public event Action<Tile> OnMouseClick;
     public event Action<Tile> OnMouseExitHover;
-    public event Action AfterSwap;
+    public event Action AfterMove;
+    public event Action AfterDisappear;
 
     private TileType _type;
+
+    public bool ToBeDestroyed { get; set; }
 
     public Vector2Int Position { get; set; }
 
@@ -41,21 +44,44 @@ public class Tile : MonoBehaviour
         StartCoroutine(Move(target, duration));
     }
 
+    public void Disappear()
+    {
+        StartCoroutine(Disappear(0.35f));
+    }
+
     private IEnumerator Move(Vector3 target, float duration)
     {
         float currTime = 0f;
+        Vector3 startPosition = transform.position;
 
         while ((transform.position - target).sqrMagnitude != 0)
         {
             currTime += Time.deltaTime;
             float interpolant = currTime / duration;
-            transform.position = Vector3.Lerp(transform.position, target, interpolant);
+            transform.position = Vector3.Lerp(startPosition, target, interpolant);
 
             yield return null;
         }
 
-        transform.position = new Vector3(transform.position.x, transform.position.y, 0f);
-        AfterSwap?.Invoke();
+        transform.position = new Vector3(transform.position.x, transform.position.y);
+        AfterMove?.Invoke();
+    }
+
+    private IEnumerator Disappear(float duration)
+    {
+        float timer = duration;
+
+        while (transform.localScale.x > 0.01f)
+        {
+            timer -= Time.deltaTime;
+            float newScale = timer / duration;
+            transform.localScale = new Vector3(newScale, newScale, newScale);
+
+            yield return null;
+        }
+
+        AfterDisappear?.Invoke();
+        Destroy(gameObject);
     }
 
     private void OnMouseDown()
