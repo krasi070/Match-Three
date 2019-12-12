@@ -30,10 +30,7 @@ public class Board : MonoBehaviour
 
     private BoardState _state;
     private int _destroyedTiles;
-
-    // This is a flag that is toggled to false after the first tile finishes swapping and then 
-    // toggled again to true after the second tile finishes swapping.
-    private bool _bothTilesSwapped = true;
+    private int _currMovingTiles;
 
     private void Start()
     {
@@ -41,20 +38,6 @@ public class Board : MonoBehaviour
         InitTiles();
         RemoveHorizontalMatchesAfterInit();
         RemoveVerticalMatchesAfterInit();
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.P))
-        {
-            for (int i = 0; i < columns; i++)
-            {
-                for (int j = 0; j < rows; j++)
-                {
-                    Debug.Log($"({i}, {j}): type({_tiles[j, i].Type.ToString()}) null({_tiles[j, i] == null}) toBeDestroyed({_tiles[j, i].ToBeDestroyed})");
-                }
-            }
-        }
     }
 
     private void InitTiles()
@@ -162,6 +145,7 @@ public class Board : MonoBehaviour
         Vector3 selectedTilePos = _selectedTile.transform.position;
         _selectedTile.MoveToPosition(toSwap.transform.position + Vector3.back, swapDuration);
         toSwap.MoveToPosition(selectedTilePos, swapDuration);
+        _currMovingTiles += 2;
 
         _tiles[_selectedTile.Position.y, _selectedTile.Position.x] = toSwap;
         _tiles[toSwap.Position.y, toSwap.Position.x] = _selectedTile;
@@ -210,13 +194,13 @@ public class Board : MonoBehaviour
 
     private void RemoveMatchedTiles()
     {
-        _bothTilesSwapped = !_bothTilesSwapped;
+        _currMovingTiles--;
 
-        if (_bothTilesSwapped)
+        if (_currMovingTiles == 0)
         {
             IEnumerable<Tile> matches = GetHorizontalMatches().Union(GetVerticalMatches());
 
-            _destroyedTiles = matches.Count();
+            _destroyedTiles += matches.Count();
 
             if (_destroyedTiles > 0)
             {
@@ -261,6 +245,7 @@ public class Board : MonoBehaviour
                     _tiles[newPosition.y, newPosition.x].MoveToPosition(
                         GetTileWorldPosition(newPosition.y, newPosition.x), 
                         fallDurationPerTile * distance);
+                    _currMovingTiles++;
 
                     _tiles[row, col] = null;
                 }
@@ -276,6 +261,7 @@ public class Board : MonoBehaviour
                 _tiles[position.y, position.x].MoveToPosition(
                     GetTileWorldPosition(position.y, position.x), 
                     fallDurationPerTile * numberOfNewTiles);
+                _currMovingTiles++;
             }
         }
     }
