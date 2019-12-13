@@ -13,6 +13,8 @@ public class Tile : MonoBehaviour
 
     private TileType _type;
 
+    public bool Selected { get; set; }
+
     public bool ToBeDestroyed { get; set; }
 
     public Vector2Int Position { get; set; }
@@ -38,6 +40,16 @@ public class Tile : MonoBehaviour
     {
         Position = position;
         Type = type;
+    }
+
+    public bool Equals(Tile tile)
+    {
+        return (Position - tile.Position).sqrMagnitude == 0;
+    }
+
+    public bool IsAdjecentTo(Tile tile)
+    {
+        return (Position - tile.Position).sqrMagnitude == 1;
     }
 
     public void MoveToPosition(Vector3 target, float duration)

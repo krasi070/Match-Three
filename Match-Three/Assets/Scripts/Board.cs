@@ -107,23 +107,20 @@ public class Board : MonoBehaviour
     {
         if (_state == BoardState.InPlay)
         {
-            if (_selectedTile != null && _selectedTile.transform.childCount > 0)
+            if (_selectedTile != null && !_selectedTile.Equals(tile) && _selectedTile.transform.childCount > 0)
             {
+                _selectedTile.Selected = false;
                 Destroy(_selectedTile.transform.GetChild(0).gameObject);
             }
 
-            if (_selectedTile != null && IsTileInRange(tile))
+            if (_selectedTile != null && _selectedTile.IsAdjecentTo(tile))
             {
                 if (tile.transform.childCount > 0)
                 {
                     Destroy(tile.transform.GetChild(0).gameObject);
                 }
 
-                if ((_selectedTile.Position - tile.Position).sqrMagnitude == 1)
-                {
-                    SwapTiles(_selectedTile, tile);
-                }
-
+                SwapTiles(_selectedTile, tile);
                 _selectedTile = null;
             }
             else
@@ -142,6 +139,26 @@ public class Board : MonoBehaviour
         }
     }
 
+    private void DeselectTile(Tile tile)
+    {
+        if (_state == BoardState.InPlay && _selectedTile != null)
+        {
+            if (_selectedTile.Equals(tile))
+            {
+                if (tile.Selected && tile.transform.childCount > 0)
+                {
+                    Destroy(tile.transform.GetChild(0).gameObject);
+                    tile.Selected = false;
+                    _selectedTile = null;
+                }
+                else
+                {
+                    tile.Selected = true;
+                }
+            }
+        }
+    }
+
     private void DragTile(Tile tile)
     {
         if (_state == BoardState.InPlay && _selectedTile != null && Input.GetMouseButton(0))
@@ -151,7 +168,7 @@ public class Board : MonoBehaviour
             Vector3 pos = Camera.main.ScreenToWorldPoint(mousePos);
 
             if ((_selectedTile.transform.position - pos).sqrMagnitude > Mathf.Min(_tileHeight, _tileWidth) / 2 &&
-                (_selectedTile.Position - tile.Position).sqrMagnitude == 1f)
+                _selectedTile.IsAdjecentTo(tile))
             {
                 if (_selectedTile.transform.childCount > 0)
                 {
@@ -191,19 +208,16 @@ public class Board : MonoBehaviour
 
     private void UndoLastSwap()
     {
+        _lastSwap[0].Selected = false;
         SwapTiles(_lastSwap[0], _lastSwap[1]);
 
         _lastSwap = null;
     }
 
-    private bool IsTileInRange(Tile tile)
-    {
-        return (_selectedTile.Position - tile.Position).sqrMagnitude <= 1;
-    }
-
     private void AddEventsToTile(Tile tile)
     {
         tile.OnMouseClick += SelectTile;
+        tile.OnMouseRelease += DeselectTile;
         tile.OnMouseHover += AddHoverEffect;
         tile.OnMouseHover += DragTile;
         tile.OnMouseExitHover += RemoveHoverEffect;
@@ -304,18 +318,23 @@ public class Board : MonoBehaviour
                 }
             }
 
-            int numberOfNewTiles = emptyTiles.Count;
+            DropNewTiles(emptyTiles);
+        }
+    }
 
-            while (emptyTiles.Count > 0)
-            {
-                Vector2Int position = emptyTiles.Dequeue();
+    private void DropNewTiles(Queue<Vector2Int> emptyTiles)
+    {
+        int numberOfNewTiles = emptyTiles.Count;
 
-                _tiles[position.y, position.x] = CreateTile(position.y, position.x, numberOfNewTiles);
-                _tiles[position.y, position.x].MoveToPosition(
-                    GetTileWorldPosition(position.y, position.x), 
-                    fallDurationPerTile * numberOfNewTiles);
-                _currMovingTiles++;
-            }
+        while (emptyTiles.Count > 0)
+        {
+            Vector2Int position = emptyTiles.Dequeue();
+
+            _tiles[position.y, position.x] = CreateTile(position.y, position.x, numberOfNewTiles);
+            _tiles[position.y, position.x].MoveToPosition(
+                GetTileWorldPosition(position.y, position.x),
+                fallDurationPerTile * numberOfNewTiles);
+            _currMovingTiles++;
         }
     }
 
@@ -467,7 +486,7 @@ public class Board : MonoBehaviour
         {
             for (int j = Mathf.Max(0, col - 1); j <= Mathf.Min(columns - 1, col + 1); j++)
             {
-                if ((_tiles[row, col].Position - _tiles[i, j].Position).sqrMagnitude <= 1)
+                if (_tiles[row, col].Equals(_tiles[i, j]) || _tiles[row, col].IsAdjecentTo(_tiles[i, j]))
                 {
                     availableTypes.Remove(_tiles[i, j].Type);
                 }
