@@ -138,6 +138,29 @@ public class Board : MonoBehaviour
         }
     }
 
+    private void DragTile(Tile tile)
+    {
+        if (_state == BoardState.InPlay && _selectedTile != null && Input.GetMouseButtonUp(0))
+        {
+            if ((_selectedTile.Position - tile.Position).sqrMagnitude == 1)
+            {
+                if (_selectedTile.transform.childCount > 0)
+                {
+                    Destroy(_selectedTile.transform.GetChild(0).gameObject);
+                }
+
+                if (tile.transform.childCount > 0)
+                {
+                    Destroy(tile.transform.GetChild(0).gameObject);
+                }
+
+                SwapTiles(tile);
+
+                _selectedTile = null;
+            }
+        }
+    }
+
     private void SwapTiles(Tile toSwap)
     {
         _state = BoardState.SwappingTiles;
@@ -164,6 +187,7 @@ public class Board : MonoBehaviour
     {
         tile.OnMouseClick += SelectTile;
         tile.OnMouseHover += AddHoverEffect;
+        tile.OnMouseHover += DragTile;
         tile.OnMouseExitHover += RemoveHoverEffect;
         tile.AfterMove += () => { _state = BoardState.InPlay; };
         tile.AfterMove += RemoveMatchedTiles;
