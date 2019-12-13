@@ -13,6 +13,7 @@ public class Board : MonoBehaviour
     private const string HoverEffectName = "HoverEffect";
 
     private Tile _selectedTile;
+    private Tile[] _lastSwap;
     private Tile[,] _tiles;
 
     private TileType[] _types = new TileType[]
@@ -29,7 +30,7 @@ public class Board : MonoBehaviour
     private float _tileWidth;
 
     private BoardState _state;
-    private int _destroyedTiles;
+    private int _tilesToDestroy;
     private int _currMovingTiles;
 
     private void Start()
@@ -117,7 +118,7 @@ public class Board : MonoBehaviour
 
                 if ((_selectedTile.Position - tile.Position).sqrMagnitude == 1)
                 {
-                    SwapTiles(tile);
+                    SwapTiles(_selectedTile, tile);
                 }
 
                 _selectedTile = null;
@@ -154,28 +155,37 @@ public class Board : MonoBehaviour
                     Destroy(tile.transform.GetChild(0).gameObject);
                 }
 
-                SwapTiles(tile);
+                SwapTiles(_selectedTile, tile);
 
                 _selectedTile = null;
             }
         }
     }
 
-    private void SwapTiles(Tile toSwap)
+    private void SwapTiles(Tile t1, Tile t2)
     {
         _state = BoardState.SwappingTiles;
 
-        Vector3 selectedTilePos = _selectedTile.transform.position;
-        _selectedTile.MoveToPosition(toSwap.transform.position + Vector3.back, swapDuration);
-        toSwap.MoveToPosition(selectedTilePos, swapDuration);
+        Vector3 t1Pos = t1.transform.position;
+        t1.MoveToPosition(t2.transform.position + Vector3.back, swapDuration);
+        t2.MoveToPosition(t1Pos, swapDuration);
         _currMovingTiles += 2;
 
-        _tiles[_selectedTile.Position.y, _selectedTile.Position.x] = toSwap;
-        _tiles[toSwap.Position.y, toSwap.Position.x] = _selectedTile;
+        _tiles[t1.Position.y, t1.Position.x] = t2;
+        _tiles[t2.Position.y, t2.Position.x] = t1;
 
-        Vector2Int toSwapPos = toSwap.Position;
-        toSwap.Position = _selectedTile.Position;
-        _selectedTile.Position = toSwapPos;
+        Vector2Int t2Pos = t2.Position;
+        t2.Position = t1.Position;
+        t1.Position = t2Pos;
+
+        _lastSwap = new Tile[] { t1, t2 };
+    }
+
+    private void UndoLastSwap()
+    {
+        SwapTiles(_lastSwap[0], _lastSwap[1]);
+
+        _lastSwap = null;
     }
 
     private bool IsTileInRange(Tile tile)
@@ -189,8 +199,7 @@ public class Board : MonoBehaviour
         tile.OnMouseHover += AddHoverEffect;
         tile.OnMouseHover += DragTile;
         tile.OnMouseExitHover += RemoveHoverEffect;
-        tile.AfterMove += () => { _state = BoardState.InPlay; };
-        tile.AfterMove += RemoveMatchedTiles;
+        tile.AfterMove += CheckForMatches;
         tile.AfterDisappear += DropTiles;
     }
 
@@ -216,33 +225,45 @@ public class Board : MonoBehaviour
         }
     }
 
-    private void RemoveMatchedTiles()
+    private void CheckForMatches()
     {
         _currMovingTiles--;
 
         if (_currMovingTiles == 0)
         {
             IEnumerable<Tile> matches = GetHorizontalMatches().Union(GetVerticalMatches());
+            _tilesToDestroy += matches.Count();
 
-            _destroyedTiles += matches.Count();
-
-            if (_destroyedTiles > 0)
+            if (_tilesToDestroy > 0)
             {
-                _state = BoardState.RemovingTiles;
-
-                foreach (Tile tile in matches)
-                {
-                    tile.Disappear();
-                }
+                RemoveTiles(matches);
             }
+            else if (_state == BoardState.SwappingTiles && _lastSwap != null)
+            {
+                UndoLastSwap();
+            }
+            else
+            {
+                _state = BoardState.InPlay;
+            }
+        }
+    }
+
+    private void RemoveTiles(IEnumerable<Tile> matches)
+    {
+        _state = BoardState.RemovingTiles;
+
+        foreach (Tile tile in matches)
+        {
+            tile.Disappear();
         }
     }
 
     private void DropTiles()
     {
-        while (_destroyedTiles > 0)
+        while (_tilesToDestroy > 0)
         {
-            _destroyedTiles--;
+            _tilesToDestroy--;
         }
 
         _state = BoardState.DroppingTiles;
