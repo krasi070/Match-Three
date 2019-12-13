@@ -6,6 +6,7 @@ public class Board : MonoBehaviour
 {
     public int rows;
     public int columns;
+    public int numberOfTypes;
     public float swapDuration;
     public float fallDurationPerTile;
 
@@ -16,15 +17,7 @@ public class Board : MonoBehaviour
     private Tile[] _lastSwap;
     private Tile[,] _tiles;
 
-    private TileType[] _types = new TileType[]
-    {
-        TileType.Apple,
-        TileType.Broccoli,
-        TileType.Coconut,
-        TileType.Loaf,
-        TileType.MilkCarton,
-        TileType.Orange
-    };
+    private TileType[] _types;
 
     private float _tileHeight;
     private float _tileWidth;
@@ -35,10 +28,20 @@ public class Board : MonoBehaviour
 
     private void Start()
     {
+        SetTileTypes();
         SetTileDimensions();
+
         InitTiles();
         RemoveHorizontalMatchesAfterInit();
         RemoveVerticalMatchesAfterInit();
+    }
+
+    private void SetTileTypes()
+    {
+        _types = System.Enum.GetValues(typeof(TileType))
+            .Cast<TileType>()
+            .Take(numberOfTypes)
+            .ToArray();
     }
 
     private void InitTiles()
@@ -141,9 +144,14 @@ public class Board : MonoBehaviour
 
     private void DragTile(Tile tile)
     {
-        if (_state == BoardState.InPlay && _selectedTile != null && Input.GetMouseButtonUp(0))
+        if (_state == BoardState.InPlay && _selectedTile != null && Input.GetMouseButton(0))
         {
-            if ((_selectedTile.Position - tile.Position).sqrMagnitude == 1)
+            Vector3 mousePos = Input.mousePosition;
+            mousePos.z = -Camera.main.transform.position.z;
+            Vector3 pos = Camera.main.ScreenToWorldPoint(mousePos);
+
+            if ((_selectedTile.transform.position - pos).sqrMagnitude > Mathf.Min(_tileHeight, _tileWidth) / 2 &&
+                (_selectedTile.Position - tile.Position).sqrMagnitude == 1f)
             {
                 if (_selectedTile.transform.childCount > 0)
                 {
@@ -453,9 +461,7 @@ public class Board : MonoBehaviour
 
     private TileType GetNewRandomType(int row, int col)
     {
-        List<TileType> availableTypes = System.Enum.GetValues(typeof(TileType))
-                        .Cast<TileType>()
-                        .ToList();
+        List<TileType> availableTypes = new List<TileType>(_types);
 
         for (int i = Mathf.Max(0, row - 1); i <= Mathf.Min(rows - 1, row + 1); i++)
         {

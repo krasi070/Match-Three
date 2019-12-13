@@ -5,5 +5,6 @@
     Orange,
     Loaf,
     Broccoli,
-    Coconut
+    Coconut,
+    StarCandy
 }

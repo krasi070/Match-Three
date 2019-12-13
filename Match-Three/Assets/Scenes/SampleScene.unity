@@ -166,6 +166,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   rows: 7
   columns: 7
+  numberOfTypes: 6
   swapDuration: 0.25
   fallDurationPerTile: 0.2
 --- !u!1 &519420028
