@@ -36,6 +36,14 @@ public class Board : MonoBehaviour
         RemoveVerticalMatchesAfterInit();
     }
 
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            ResetTiles();
+        }
+    }
+
     private void SetTileTypes()
     {
         _types = System.Enum.GetValues(typeof(TileType))
@@ -223,6 +231,7 @@ public class Board : MonoBehaviour
         tile.OnMouseExitHover += RemoveHoverEffect;
         tile.AfterMove += CheckForMatches;
         tile.AfterDisappear += DropTiles;
+        tile.AfterAppear += () => _state = BoardState.InPlay;
     }
 
     private void AddHoverEffect(Tile tile)
@@ -277,7 +286,7 @@ public class Board : MonoBehaviour
 
         foreach (Tile tile in matches)
         {
-            tile.Disappear();
+            tile.Disappear(true);
         }
     }
 
@@ -336,6 +345,80 @@ public class Board : MonoBehaviour
                 fallDurationPerTile * numberOfNewTiles);
             _currMovingTiles++;
         }
+    }
+
+    private void ResetTiles()
+    {
+        if (_state != BoardState.InPlay)
+        {
+            return;
+        }
+
+        _state = BoardState.Resetting;
+
+        foreach (Transform child in transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        InitTiles();
+        RemoveHorizontalMatchesAfterInit();
+        RemoveVerticalMatchesAfterInit();
+        ShowAllTiles();
+    }
+
+    private void HideAllTiles()
+    {
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < columns; col++)
+            {
+                _tiles[row, col].Disappear(false);
+            }
+        }
+    }
+
+    private void ShowAllTiles()
+    {
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < columns; col++)
+            {
+                _tiles[row, col].Appear();
+            }
+        }
+    }
+
+    private IList<Tile> GetTilesAsList()
+    {
+        IList<Tile> tilesList = new List<Tile>();
+
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < columns; col++)
+            {
+                tilesList.Add(_tiles[row, col]);
+            }
+        }
+
+        return tilesList;
+    }
+
+    private IList<Tile> RandomizeOrder(IList<Tile> list)
+    {
+        int currIndex = list.Count;
+
+        while (currIndex > 1)
+        {
+            currIndex--;
+            int randomIndex = Random.Range(0, currIndex + 1);
+
+            Tile temp = list[randomIndex];
+            list[randomIndex] = list[currIndex];
+            list[currIndex] = temp;
+        }
+
+        return list;
     }
 
     private ICollection<Tile> GetHorizontalMatches()

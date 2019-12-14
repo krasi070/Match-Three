@@ -3,5 +3,6 @@
     InPlay,
     SwappingTiles,
     RemovingTiles,
-    DroppingTiles
+    DroppingTiles,
+    Resetting
 };

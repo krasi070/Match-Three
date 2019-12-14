@@ -10,6 +10,7 @@ public class Tile : MonoBehaviour
     public event Action<Tile> OnMouseExitHover;
     public event Action AfterMove;
     public event Action AfterDisappear;
+    public event Action AfterAppear;
 
     private TileType _type;
 
@@ -57,9 +58,14 @@ public class Tile : MonoBehaviour
         StartCoroutine(Move(target, duration));
     }
 
-    public void Disappear()
+    public void Appear()
     {
-        StartCoroutine(Disappear(0.35f));
+        StartCoroutine(Appear(0.35f));
+    }
+
+    public void Disappear(bool destroy)
+    {
+        StartCoroutine(Disappear(0.35f, destroy));
     }
 
     private IEnumerator Move(Vector3 target, float duration)
@@ -80,21 +86,38 @@ public class Tile : MonoBehaviour
         AfterMove?.Invoke();
     }
 
-    private IEnumerator Disappear(float duration)
+    private IEnumerator Appear(float duration)
     {
-        float timer = duration;
+        float timer = 0;
 
-        while (transform.localScale.x > 0.01f)
+        while (timer < duration)
         {
-            timer -= Time.deltaTime;
-            float newScale = timer / duration;
-            transform.localScale = new Vector3(newScale, newScale, newScale);
+            timer += Time.deltaTime;
+            transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, timer / duration);
 
             yield return null;
         }
 
-        AfterDisappear?.Invoke();
-        Destroy(gameObject);
+        AfterAppear?.Invoke();
+    }
+
+    private IEnumerator Disappear(float duration, bool destroy)
+    {
+        float timer = duration;
+
+        while (timer > 0)
+        {
+            timer -= Time.deltaTime;
+            transform.localScale = Vector3.Lerp(Vector3.zero, Vector3.one, timer / duration);
+
+            yield return null;
+        }
+
+        if (destroy)
+        {
+            AfterDisappear?.Invoke();
+            Destroy(gameObject);
+        }
     }
 
     private void OnMouseDown()
