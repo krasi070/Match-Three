@@ -56,7 +56,7 @@ public class Board : MonoBehaviour
             }
         }
 
-        Camera.main.orthographicSize = rows * 1.1f;
+        Camera.main.orthographicSize = Mathf.Max(rows, columns / 2 + _tileWidth) * (_tileHeight / 2) * 1.1f;
     }
 
     private Tile CreateTile(int row, int col)
@@ -90,8 +90,8 @@ public class Board : MonoBehaviour
 
     private Vector3 GetTileWorldPosition(int row, int col, float yOffset)
     {
-        float startX = -_tileWidth * (rows - 1) / 2;
-        float startY = -_tileHeight * (columns - 1) / 2;
+        float startX = -_tileWidth * (columns - 1) / 2;
+        float startY = -_tileHeight * (rows - 1) / 2;
 
         return new Vector3(startX + col * _tileWidth, startY + (row + yOffset) * _tileHeight);
     }
