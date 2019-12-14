@@ -168,7 +168,7 @@ MonoBehaviour:
   columns: 7
   numberOfTypes: 6
   swapDuration: 0.25
-  fallDurationPerTile: 0.2
+  fallDurationPerTile: 0.175
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
