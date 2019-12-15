@@ -10,8 +10,11 @@ public class Board : MonoBehaviour
     public float swapDuration;
     public float fallDurationPerTile;
 
+    public ScoreTracker scoreTracker;
+
     private const string SelectEffectName = "SelectEffect";
     private const string HoverEffectName = "HoverEffect";
+    private const int ThreeMatchPoints = 10;
 
     private Tile _selectedTile;
     private Tile[] _lastSwap;
@@ -25,6 +28,9 @@ public class Board : MonoBehaviour
     private BoardState _state;
     private int _tilesToDestroy;
     private int _currMovingTiles;
+
+    private int _points;
+    private int _pointsToGive;
 
     private void Start()
     {
@@ -262,7 +268,10 @@ public class Board : MonoBehaviour
 
         if (_currMovingTiles == 0)
         {
+            _pointsToGive = 0;
             IEnumerable<Tile> matches = GetHorizontalMatches().Union(GetVerticalMatches());
+            _points += _pointsToGive;
+            scoreTracker.UpdateScore(_points);
             _tilesToDestroy += matches.Count();
 
             if (_tilesToDestroy > 0)
@@ -451,11 +460,14 @@ public class Board : MonoBehaviour
                     _tiles[row, col - 2].ToBeDestroyed = true;
                     _tiles[row, col - 1].ToBeDestroyed = true;
                     _tiles[row, col].ToBeDestroyed = true;
+
+                    _pointsToGive += ThreeMatchPoints;
                 }
                 else if (counter > 3)
                 {
                     matchedTiles.Add(_tiles[row, col]);
                     _tiles[row, col].ToBeDestroyed = true;
+                    _pointsToGive += ThreeMatchPoints;
                 }
             }
         }
@@ -493,11 +505,14 @@ public class Board : MonoBehaviour
                     _tiles[row - 2, col].ToBeDestroyed = true;
                     _tiles[row - 1, col].ToBeDestroyed = true;
                     _tiles[row, col].ToBeDestroyed = true;
+
+                    _pointsToGive += ThreeMatchPoints;
                 }
                 else if (counter > 3)
                 {
                     matchedTiles.Add(_tiles[row, col]);
                     _tiles[row, col].ToBeDestroyed = true;
+                    _pointsToGive += ThreeMatchPoints;
                 }
             }
         }
