@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Board : MonoBehaviour
 {
@@ -14,11 +15,15 @@ public class Board : MonoBehaviour
 
     private const string SelectEffectName = "SelectEffect";
     private const string HoverEffectName = "HoverEffect";
-    private const int ThreeMatchPoints = 10;
+    private const int ThreeMatchPoints = 15;
 
     private Tile _selectedTile;
     private Tile[] _lastSwap;
     private Tile[,] _tiles;
+
+    private Queue<List<Tile>> _matchedTiles = new Queue<List<Tile>>();
+
+    private Canvas _canvas;
 
     private TileType[] _types;
 
@@ -30,10 +35,11 @@ public class Board : MonoBehaviour
     private int _currMovingTiles;
 
     private int _points;
-    private int _pointsToGive;
+    private int _multiplier = 1;
 
     private void Start()
     {
+        SetCanvas();
         SetTileTypes();
         SetTileDimensions();
 
@@ -48,6 +54,11 @@ public class Board : MonoBehaviour
         {
             ResetTiles();
         }
+    }
+
+    private void SetCanvas()
+    {
+        _canvas = transform.GetChild(0).GetComponent<Canvas>();
     }
 
     private void SetTileTypes()
@@ -268,14 +279,13 @@ public class Board : MonoBehaviour
 
         if (_currMovingTiles == 0)
         {
-            _pointsToGive = 0;
             IEnumerable<Tile> matches = GetHorizontalMatches().Union(GetVerticalMatches());
-            _points += _pointsToGive;
-            scoreTracker.UpdateScore(_points);
             _tilesToDestroy += matches.Count();
 
             if (_tilesToDestroy > 0)
             {
+                AddUpPoints();
+                scoreTracker.UpdateScore(_points);
                 RemoveTiles(matches);
             }
             else if (_state == BoardState.SwappingTiles && _lastSwap != null)
@@ -285,6 +295,7 @@ public class Board : MonoBehaviour
             else
             {
                 _state = BoardState.InPlay;
+                _multiplier = 1;
             }
         }
     }
@@ -367,7 +378,10 @@ public class Board : MonoBehaviour
 
         foreach (Transform child in transform)
         {
-            Destroy(child.gameObject);
+            if (child.name != _canvas.name)
+            {
+                Destroy(child.gameObject);
+            }
         }
 
         InitTiles();
@@ -461,13 +475,14 @@ public class Board : MonoBehaviour
                     _tiles[row, col - 1].ToBeDestroyed = true;
                     _tiles[row, col].ToBeDestroyed = true;
 
-                    _pointsToGive += ThreeMatchPoints;
+                    _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
                 }
                 else if (counter > 3)
                 {
                     matchedTiles.Add(_tiles[row, col]);
                     _tiles[row, col].ToBeDestroyed = true;
-                    _pointsToGive += ThreeMatchPoints;
+
+                    _matchedTiles.Peek().Add(_tiles[row, col]);
                 }
             }
         }
@@ -506,18 +521,38 @@ public class Board : MonoBehaviour
                     _tiles[row - 1, col].ToBeDestroyed = true;
                     _tiles[row, col].ToBeDestroyed = true;
 
-                    _pointsToGive += ThreeMatchPoints;
+                    _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
                 }
                 else if (counter > 3)
                 {
                     matchedTiles.Add(_tiles[row, col]);
                     _tiles[row, col].ToBeDestroyed = true;
-                    _pointsToGive += ThreeMatchPoints;
+                    _matchedTiles.Peek().Add(_tiles[row, col]);
                 }
             }
         }
 
         return matchedTiles;
+    }
+
+    private void AddUpPoints()
+    {
+        while (_matchedTiles.Count > 0)
+        {
+            List<Tile> currMatch = _matchedTiles.Dequeue();
+            int pointsToGive = (currMatch.Count - 2) * ThreeMatchPoints * _multiplier;
+
+            Vector3 pointsTextPos = Vector3.Lerp(
+                currMatch[0].transform.position, currMatch[currMatch.Count - 1].transform.position, 0.5f);
+
+            GameObject pointsText = new GameObject(pointsToGive.ToString());
+            pointsText.transform.SetParent(_canvas.transform);
+            pointsText.transform.position = pointsTextPos + Vector3.back;
+            pointsText.AddComponent<Points>().Init(pointsToGive.ToString());
+
+            _points += pointsToGive;
+            _multiplier++;
+        }
     }
 
     private void RemoveHorizontalMatchesAfterInit()
