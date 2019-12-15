@@ -17,7 +17,7 @@ public class Points : MonoBehaviour
         Text pointsField = gameObject.AddComponent<Text>();
         pointsField.font = Resources.Load<Font>("Fonts/HVD_Comic_Serif_Pro");
         pointsField.fontSize = 1;
-        pointsField.color = new Color32(244, 244, 244, 255);
+        pointsField.color = new Color32(50, 50, 50, 255);
         pointsField.alignment = TextAnchor.MiddleCenter;
         pointsField.horizontalOverflow = HorizontalWrapMode.Overflow;
         pointsField.verticalOverflow = VerticalWrapMode.Overflow;
@@ -25,7 +25,7 @@ public class Points : MonoBehaviour
 
         Shadow pointsShadow = gameObject.AddComponent<Shadow>();
         pointsShadow.effectDistance = new Vector2(0.05f, -0.05f);
-        pointsShadow.effectColor = new Color(0f, 0f, 0f, 1f);
+        pointsShadow.effectColor = new Color32(244, 244, 244, 255);
     }
 
     private IEnumerator MoveUp()
