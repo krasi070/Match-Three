@@ -4,5 +4,6 @@
     SwappingTiles,
     RemovingTiles,
     DroppingTiles,
-    Resetting
+    Resetting,
+    NoMoreMoves
 };

@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class Board : MonoBehaviour
 {
@@ -12,6 +11,7 @@ public class Board : MonoBehaviour
     public float fallDurationPerTile;
 
     public ScoreTracker scoreTracker;
+    public GameObject noMoreMovesField;
 
     private const string SelectEffectName = "SelectEffect";
     private const string HoverEffectName = "HoverEffect";
@@ -22,6 +22,7 @@ public class Board : MonoBehaviour
     private Tile[,] _tiles;
 
     private Queue<List<Tile>> _matchedTiles = new Queue<List<Tile>>();
+    private List<Tile> _hints;
 
     private Canvas _canvas;
 
@@ -50,9 +51,10 @@ public class Board : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Space) && _state == BoardState.NoMoreMoves)
         {
             ResetTiles();
+            noMoreMovesField.SetActive(false);
         }
     }
 
@@ -296,6 +298,12 @@ public class Board : MonoBehaviour
             {
                 _state = BoardState.InPlay;
                 _multiplier = 1;
+
+                if (!MovesLeft())
+                {
+                    _state = BoardState.NoMoreMoves;
+                    noMoreMovesField.SetActive(true);
+                }
             }
         }
     }
@@ -369,7 +377,7 @@ public class Board : MonoBehaviour
 
     private void ResetTiles()
     {
-        if (_state != BoardState.InPlay)
+        if (_state != BoardState.NoMoreMoves)
         {
             return;
         }
@@ -388,16 +396,11 @@ public class Board : MonoBehaviour
         RemoveHorizontalMatchesAfterInit();
         RemoveVerticalMatchesAfterInit();
         ShowAllTiles();
-    }
 
-    private void HideAllTiles()
-    {
-        for (int row = 0; row < rows; row++)
+        if (!MovesLeft())
         {
-            for (int col = 0; col < columns; col++)
-            {
-                _tiles[row, col].Disappear(false);
-            }
+            _state = BoardState.NoMoreMoves;
+            noMoreMovesField.SetActive(true);
         }
     }
 
@@ -412,36 +415,161 @@ public class Board : MonoBehaviour
         }
     }
 
-    private IList<Tile> GetTilesAsList()
+    private bool MovesLeft()
     {
-        IList<Tile> tilesList = new List<Tile>();
+        _hints = new List<Tile>();
 
         for (int row = 0; row < rows; row++)
         {
             for (int col = 0; col < columns; col++)
             {
-                tilesList.Add(_tiles[row, col]);
+                if (PossibleMatchInLine(_tiles[row, col]) ||
+                    PossibleMatchXShape(_tiles[row, col]) ||
+                    PossibleMatchLyingL(_tiles[row, col]) ||
+                    PossibleMatchStandingL(_tiles[row, col]))
+                {
+                    _hints.Add(_tiles[row, col]);
+                }
             }
         }
 
-        return tilesList;
+        return _hints.Count > 0;
     }
 
-    private IList<Tile> RandomizeOrder(IList<Tile> list)
+    private bool PossibleMatchInLine(Tile tile)
     {
-        int currIndex = list.Count;
+        int row = tile.Position.y;
+        int col = tile.Position.x;
+        TileType currType = tile.Type;
 
-        while (currIndex > 1)
+        // (x) y x x
+        if (col > 2 && _tiles[row, col - 2].Type == currType && _tiles[row, col - 3].Type == currType)
         {
-            currIndex--;
-            int randomIndex = Random.Range(0, currIndex + 1);
-
-            Tile temp = list[randomIndex];
-            list[randomIndex] = list[currIndex];
-            list[currIndex] = temp;
+            return true;
         }
 
-        return list;
+        if (row < rows - 3 && _tiles[row + 2, col].Type == currType && _tiles[row + 3, col].Type == currType)
+        {
+            return true;
+        }
+
+        if (col < columns - 3 && _tiles[row, col + 2].Type == currType && _tiles[row, col + 3].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 2 && _tiles[row - 2, col].Type == currType && _tiles[row - 3, col].Type == currType)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool PossibleMatchXShape(Tile tile)
+    {
+        int row = tile.Position.y;
+        int col = tile.Position.x;
+        TileType currType = tile.Type;
+
+        // z (x) a 
+        // x  y  x
+        if (col > 0 && col < columns - 1 && row < rows - 1 &&
+            _tiles[row + 1, col - 1].Type == currType && _tiles[row + 1, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 0 && row < rows - 1 && col < columns - 1 &&
+            _tiles[row + 1, col + 1].Type == currType && _tiles[row - 1, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (col > 0 && col < columns - 1 && row > 0 &&
+            _tiles[row - 1, col - 1].Type == currType && _tiles[row - 1, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 0 && row < rows - 1 && col > 0 &&
+            _tiles[row + 1, col - 1].Type == currType && _tiles[row - 1, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool PossibleMatchLyingL(Tile tile)
+    {
+        int row = tile.Position.y;
+        int col = tile.Position.x;
+        TileType currType = tile.Type;
+
+        // z y (x)
+        // x x  a
+        if (col > 1 && row < rows - 1 &&
+            _tiles[row + 1, col - 2].Type == currType && _tiles[row + 1, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (col < columns - 2 && row < rows - 1 &&
+            _tiles[row + 1, col + 1].Type == currType && _tiles[row + 1, col + 2].Type == currType)
+        {
+            return true;
+        }
+
+        if (col < columns - 2 && row > 0 &&
+            _tiles[row - 1, col + 1].Type == currType && _tiles[row - 1, col + 2].Type == currType)
+        {
+            return true;
+        }
+
+        if (col > 1 && row > 0 &&
+            _tiles[row - 1, col - 2].Type == currType && _tiles[row - 1, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool PossibleMatchStandingL(Tile tile)
+    {
+        int row = tile.Position.y;
+        int col = tile.Position.x;
+        TileType currType = tile.Type;
+
+        // y (x)
+        // x  a
+        // x  z
+        if (row < rows - 2 && col > 0 &&
+            _tiles[row + 1, col - 1].Type == currType && _tiles[row + 2, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row < rows - 2 && col < columns - 1 &&
+            _tiles[row + 1, col + 1].Type == currType && _tiles[row + 2, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 1 && col < columns - 1 &&
+            _tiles[row - 1, col + 1].Type == currType && _tiles[row - 2, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 1 && col > 0 &&
+            _tiles[row - 1, col - 1].Type == currType && _tiles[row - 2, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private ICollection<Tile> GetHorizontalMatches()
