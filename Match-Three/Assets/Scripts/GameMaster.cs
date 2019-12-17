@@ -4,17 +4,37 @@ using UnityEngine.UI;
 
 public class GameMaster : MonoBehaviour
 {
-    public float timeToExit;
+    public GameObject titleImage;
+    public GameObject instructionsText;
+    public GameObject board;
+    public GameObject ui;
 
-    private Image _fadeOutImage;
+    public float timeToExit;
+    public Image fadeOutImage;
+
+    private enum GameState
+    {
+        InTitleScreen,
+        InPlay
+    }
+
+    private GameState _state;
 
     private void Start()
     {
-        _fadeOutImage = GetComponentInChildren<Image>();
+        _state = GameState.InTitleScreen;
     }
 
     private void Update()
     {
+        if (Input.GetMouseButtonDown(0) && _state == GameState.InTitleScreen)
+        {
+            titleImage.SetActive(false);
+            instructionsText.SetActive(false);
+            board.SetActive(true);
+            ui.SetActive(true);
+        }
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             StartCoroutine(Exiting());
@@ -29,7 +49,7 @@ public class GameMaster : MonoBehaviour
         {
             timer += Time.deltaTime;
             float alpha = Mathf.Lerp(0f, 1f, timer / timeToExit);
-            _fadeOutImage.color = new Color(_fadeOutImage.color.r, _fadeOutImage.color.g, _fadeOutImage.color.b, alpha);
+            fadeOutImage.color = new Color(fadeOutImage.color.r, fadeOutImage.color.g, fadeOutImage.color.b, alpha);
 
             if (timer >= timeToExit)
             {
@@ -39,6 +59,6 @@ public class GameMaster : MonoBehaviour
             yield return null;
         }
 
-        _fadeOutImage.color = new Color(_fadeOutImage.color.r, _fadeOutImage.color.g, _fadeOutImage.color.b, 0f);
+        fadeOutImage.color = new Color(fadeOutImage.color.r, fadeOutImage.color.g, fadeOutImage.color.b, 0f);
     }
 }
