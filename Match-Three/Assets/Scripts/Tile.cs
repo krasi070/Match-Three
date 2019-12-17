@@ -11,6 +11,7 @@ public class Tile : MonoBehaviour
     public event System.Action AfterDisappear;
     public event System.Action AfterAppear;
 
+    private bool _shaking;
     private TileType _type;
 
     public bool Selected { get; set; }
@@ -67,6 +68,17 @@ public class Tile : MonoBehaviour
         StartCoroutine(Disappear(0.35f, destroy));
     }
 
+    public void StartShaking(float amount)
+    {
+        _shaking = true;
+        StartCoroutine(Shake(amount));
+    }
+
+    public void StopShaking()
+    {
+        _shaking = false;
+    }
+
     private IEnumerator Move(Vector3 target, float duration)
     {
         float currTime = 0f;
@@ -117,6 +129,23 @@ public class Tile : MonoBehaviour
             AfterDisappear?.Invoke();
             Destroy(gameObject);
         }
+    }
+
+    private IEnumerator Shake(float amount)
+    {
+        float speed = 3f;
+        Vector3 startingPos = transform.position;
+
+        while (_shaking)
+        {
+            float x = startingPos.x + Time.deltaTime * speed * amount * Random.Range(-1, 2);
+            float y = startingPos.y + Time.deltaTime * speed * amount * Random.Range(-1, 2);
+            transform.position = new Vector3(x, y);
+
+            yield return null;
+        }
+
+        transform.position = startingPos;
     }
 
     private void OnMouseDown()

@@ -73,10 +73,11 @@ public class Board : MonoBehaviour
                 timer.ResetTimeLeft();
             }
 
-            ResetTiles();
-            timer.Resume();
+            StopShakingTiles();
             noMoreMovesField.SetActive(false);
             timesUpField.SetActive(false);
+            ResetTiles();
+            timer.Resume();
         }
     }
 
@@ -280,7 +281,7 @@ public class Board : MonoBehaviour
         tile.OnMouseExitHover += RemoveHoverEffect;
         tile.AfterMove += CheckForMatches;
         tile.AfterDisappear += DropTiles;
-        tile.AfterAppear += () => _state = BoardState.InPlay;
+        tile.AfterAppear += () => { _state = _state != BoardState.NoMoreMoves ? BoardState.InPlay : BoardState.NoMoreMoves; };
     }
 
     private void AddEventsToTimer()
@@ -338,6 +339,7 @@ public class Board : MonoBehaviour
                 if (!MovesLeft())
                 {
                     _state = BoardState.NoMoreMoves;
+                    ShakeTiles();
                     noMoreMovesField.SetActive(true);
                     timer.Pause();
                 }
@@ -432,6 +434,7 @@ public class Board : MonoBehaviour
         if (!MovesLeft())
         {
             _state = BoardState.NoMoreMoves;
+            ShakeTiles();
             noMoreMovesField.SetActive(true);
             timer.Pause();
         }
@@ -793,6 +796,28 @@ public class Board : MonoBehaviour
         return availableTypes[Random.Range(0, availableTypes.Count)];
     }
 
+    private void ShakeTiles()
+    {
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < columns; col++)
+            {
+                _tiles[row, col].StartShaking(Mathf.Min(_tileHeight, _tileWidth) / 2);
+            }
+        }
+    }
+
+    private void StopShakingTiles()
+    {
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < columns; col++)
+            {
+                _tiles[row, col].StopShaking();
+            }
+        }
+    }
+
     private void GoToNextLevel()
     {
         SetLevel(_level + 1);
@@ -806,5 +831,6 @@ public class Board : MonoBehaviour
     {
         _state = BoardState.GameOver;
         timesUpField.SetActive(true);
+        ShakeTiles();
     }
 }
