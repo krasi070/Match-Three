@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Board : MonoBehaviour
 {
@@ -11,11 +12,18 @@ public class Board : MonoBehaviour
     public float fallDurationPerTile;
 
     public ScoreTracker scoreTracker;
+    public Text levelTextField;
+    public Timer timer;
     public GameObject noMoreMovesField;
+    public GameObject timesUpField;
 
     private const string SelectEffectName = "SelectEffect";
     private const string HoverEffectName = "HoverEffect";
-    private const int ThreeMatchPoints = 15;
+    private const int StartingThreeMatchPoints = 10;
+    private const float StartingThreeMatchSeconds = 5f;
+
+    private int _threeMatchPoints = 10;
+    private float _threeMatchSeconds = 5f;
 
     private Tile _selectedTile;
     private Tile[] _lastSwap;
@@ -35,11 +43,13 @@ public class Board : MonoBehaviour
     private int _tilesToDestroy;
     private int _currMovingTiles;
 
+    private int _level;
     private int _points;
     private int _multiplier = 1;
 
     private void Start()
     {
+        SetLevel(1);
         SetCanvas();
         SetTileTypes();
         SetTileDimensions();
@@ -51,16 +61,29 @@ public class Board : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && _state == BoardState.NoMoreMoves)
+        if (Input.GetMouseButtonDown(0) && (_state == BoardState.NoMoreMoves || _state == BoardState.GameOver))
         {
+            if (_state == BoardState.GameOver)
+            {
+                SetLevel(1);
+                _points = 0;
+                scoreTracker.UpdateScore(_points);
+                _threeMatchPoints = StartingThreeMatchPoints;
+                _threeMatchSeconds = StartingThreeMatchSeconds;
+                timer.ResetTimeLeft();
+            }
+
             ResetTiles();
+            timer.Resume();
             noMoreMovesField.SetActive(false);
+            timesUpField.SetActive(false);
         }
     }
 
     private void SetCanvas()
     {
         _canvas = transform.GetChild(0).GetComponent<Canvas>();
+        AddEventsToTimer();
     }
 
     private void SetTileTypes()
@@ -69,6 +92,12 @@ public class Board : MonoBehaviour
             .Cast<TileType>()
             .Take(numberOfTypes)
             .ToArray();
+    }
+
+    private void SetLevel(int level)
+    {
+        _level = level;
+        levelTextField.text = _level.ToString().PadLeft(2, '0');
     }
 
     private void InitTiles()
@@ -84,6 +113,7 @@ public class Board : MonoBehaviour
         }
 
         Camera.main.orthographicSize = Mathf.Max(rows, columns / 2 + _tileWidth) * (_tileHeight / 2) * 1.1f;
+        Camera.main.transform.position = new Vector3(0f, -0.0625f * rows, Camera.main.transform.position.z);
     }
 
     private Tile CreateTile(int row, int col)
@@ -253,6 +283,12 @@ public class Board : MonoBehaviour
         tile.AfterAppear += () => _state = BoardState.InPlay;
     }
 
+    private void AddEventsToTimer()
+    {
+        timer.ReachedZero += GameOver;
+        timer.ReachedMax += GoToNextLevel;
+    }
+
     private void AddHoverEffect(Tile tile)
     {
         if (tile.transform.childCount == 0 && _state == BoardState.InPlay)
@@ -303,6 +339,7 @@ public class Board : MonoBehaviour
                 {
                     _state = BoardState.NoMoreMoves;
                     noMoreMovesField.SetActive(true);
+                    timer.Pause();
                 }
             }
         }
@@ -377,11 +414,6 @@ public class Board : MonoBehaviour
 
     private void ResetTiles()
     {
-        if (_state != BoardState.NoMoreMoves)
-        {
-            return;
-        }
-
         _state = BoardState.Resetting;
 
         foreach (Transform child in transform)
@@ -401,6 +433,7 @@ public class Board : MonoBehaviour
         {
             _state = BoardState.NoMoreMoves;
             noMoreMovesField.SetActive(true);
+            timer.Pause();
         }
     }
 
@@ -668,7 +701,10 @@ public class Board : MonoBehaviour
         while (_matchedTiles.Count > 0)
         {
             List<Tile> currMatch = _matchedTiles.Dequeue();
-            int pointsToGive = (currMatch.Count - 2) * ThreeMatchPoints * _multiplier;
+            int pointsToGive = (currMatch.Count - 2) * _threeMatchPoints * _multiplier;
+
+            float secondsToAdd = (_threeMatchSeconds + currMatch.Count - 3) / _multiplier;
+            timer.AddSeconds(secondsToAdd);
 
             Vector3 pointsTextPos = Vector3.Lerp(
                 currMatch[0].transform.position, currMatch[currMatch.Count - 1].transform.position, 0.5f);
@@ -755,5 +791,20 @@ public class Board : MonoBehaviour
         }
 
         return availableTypes[Random.Range(0, availableTypes.Count)];
+    }
+
+    private void GoToNextLevel()
+    {
+        SetLevel(_level + 1);
+        _threeMatchPoints += 5;
+        _threeMatchSeconds = Mathf.Max(_threeMatchSeconds - 0.25f, 1f);
+        timer.ResetTimeLeft();
+        timer.Resume();
+    }
+
+    private void GameOver()
+    {
+        _state = BoardState.GameOver;
+        timesUpField.SetActive(true);
     }
 }

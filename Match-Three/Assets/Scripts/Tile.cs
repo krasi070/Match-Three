@@ -1,16 +1,15 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 
 public class Tile : MonoBehaviour
 {
-    public event Action<Tile> OnMouseHover;
-    public event Action<Tile> OnMouseClick;
-    public event Action<Tile> OnMouseRelease;
-    public event Action<Tile> OnMouseExitHover;
-    public event Action AfterMove;
-    public event Action AfterDisappear;
-    public event Action AfterAppear;
+    public event System.Action<Tile> OnMouseHover;
+    public event System.Action<Tile> OnMouseClick;
+    public event System.Action<Tile> OnMouseRelease;
+    public event System.Action<Tile> OnMouseExitHover;
+    public event System.Action AfterMove;
+    public event System.Action AfterDisappear;
+    public event System.Action AfterAppear;
 
     private TileType _type;
 

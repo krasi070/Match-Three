@@ -5,5 +5,6 @@
     RemovingTiles,
     DroppingTiles,
     Resetting,
-    NoMoreMoves
+    NoMoreMoves,
+    GameOver
 };
