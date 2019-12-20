@@ -133,7 +133,7 @@ public class Tile : MonoBehaviour
 
     private IEnumerator Shake(float amount)
     {
-        float speed = 3f;
+        float speed = 1.5f;
         Vector3 startingPos = transform.position;
 
         while (_shaking)
