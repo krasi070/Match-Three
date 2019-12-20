@@ -57,6 +57,7 @@ public class Board : MonoBehaviour
         InitTiles();
         RemoveHorizontalMatchesAfterInit();
         RemoveVerticalMatchesAfterInit();
+        MovesLeft();
     }
 
     private void Update()
@@ -78,6 +79,17 @@ public class Board : MonoBehaviour
             timesUpField.SetActive(false);
             ResetTiles();
             timer.Resume();
+        }
+    }
+
+    public void GiveHint()
+    {
+        if (_state == BoardState.InPlay && _hints != null)
+        {
+            foreach (Tile tile in _hints)
+            {
+                tile.StartHighlight();
+            }
         }
     }
 
@@ -275,6 +287,7 @@ public class Board : MonoBehaviour
     private void AddEventsToTile(Tile tile)
     {
         tile.OnMouseClick += SelectTile;
+        tile.OnMouseClick += RemoveAllHints;
         tile.OnMouseRelease += DeselectTile;
         tile.OnMouseHover += AddHoverEffect;
         tile.OnMouseHover += DragTile;
@@ -309,6 +322,19 @@ public class Board : MonoBehaviour
         if (tile.transform.childCount > 0 && tile.transform.GetChild(0).name == HoverEffectName)
         {
             Destroy(tile.transform.GetChild(0).gameObject);
+        }
+    }
+
+    // This method does not need a parameter.
+    // The parameter is there because the OnMouseClick event requests it.
+    private void RemoveAllHints(Tile t)
+    {
+        if (_hints != null)
+        {
+            foreach (Tile tile in _hints)
+            {
+                tile.StopHighlight();
+            }
         }
     }
 

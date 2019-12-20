@@ -12,6 +12,7 @@ public class Tile : MonoBehaviour
     public event System.Action AfterAppear;
 
     private bool _shaking;
+    private bool _highlighted;
     private TileType _type;
 
     public bool Selected { get; set; }
@@ -70,13 +71,30 @@ public class Tile : MonoBehaviour
 
     public void StartShaking(float amount)
     {
-        _shaking = true;
-        StartCoroutine(Shake(amount));
+        if (!_shaking)
+        {
+            _shaking = true;
+            StartCoroutine(Shake(amount));
+        }
     }
 
     public void StopShaking()
     {
         _shaking = false;
+    }
+
+    public void StartHighlight()
+    {
+        if (!_highlighted)
+        {
+            _highlighted = true;
+            StartCoroutine(Highlight(0.1f, 6f));
+        }
+    }
+
+    public void StopHighlight()
+    {
+        _highlighted = false;
     }
 
     private IEnumerator Move(Vector3 target, float duration)
@@ -146,6 +164,22 @@ public class Tile : MonoBehaviour
         }
 
         transform.position = startingPos;
+    }
+
+    private IEnumerator Highlight(float amount, float speed)
+    {
+        float timer = 0f;
+        Vector3 vectorAmount = new Vector3(amount, amount, amount);
+
+        while (_highlighted)
+        {
+            timer += Time.deltaTime;
+            transform.localScale = Vector3.one - Vector3.Lerp(Vector3.zero, vectorAmount, Mathf.Abs(Mathf.Sin(timer * speed)));
+
+            yield return null;
+        }
+
+        transform.localScale = Vector3.one;
     }
 
     private void OnMouseDown()
