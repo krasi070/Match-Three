@@ -183,7 +183,7 @@ public class Board : MonoBehaviour
                 Destroy(_selectedTile.transform.GetChild(0).gameObject);
             }
 
-            if (_selectedTile != null && _selectedTile.IsAdjecentTo(tile))
+            if (_selectedTile != null && AreTilesAdjecent(_selectedTile, tile))
             {
                 if (tile.transform.childCount > 0)
                 {
@@ -505,22 +505,22 @@ public class Board : MonoBehaviour
         TileType currType = tile.Type;
 
         // (x) y x x
-        if (col > 2 && _tiles[row, col - 2].Type == currType && _tiles[row, col - 3].Type == currType)
+        if (_tiles[row, (columns + col - 2) % columns].Type == currType && _tiles[row, (columns + col - 3) % columns].Type == currType)
         {
             return true;
         }
 
-        if (row < rows - 3 && _tiles[row + 2, col].Type == currType && _tiles[row + 3, col].Type == currType)
+        if (_tiles[(row + 2) % rows, col].Type == currType && _tiles[(row + 3) % rows, col].Type == currType)
         {
             return true;
         }
 
-        if (col < columns - 3 && _tiles[row, col + 2].Type == currType && _tiles[row, col + 3].Type == currType)
+        if (_tiles[row, (col + 2) % columns].Type == currType && _tiles[row, (col + 3) % columns].Type == currType)
         {
             return true;
         }
 
-        if (row > 2 && _tiles[row - 2, col].Type == currType && _tiles[row - 3, col].Type == currType)
+        if (_tiles[(rows + row - 2) % rows, col].Type == currType && _tiles[(rows + row - 3) % rows, col].Type == currType)
         {
             return true;
         }
@@ -536,26 +536,26 @@ public class Board : MonoBehaviour
 
         // z (x) a 
         // x  y  x
-        if (col > 0 && col < columns - 1 && row < rows - 1 &&
-            _tiles[row + 1, col - 1].Type == currType && _tiles[row + 1, col + 1].Type == currType)
+        if (_tiles[(row + 1) % rows, (columns + col - 1) % columns].Type == currType && 
+            _tiles[(row + 1) % rows, (col + 1) % columns].Type == currType)
         {
             return true;
         }
 
-        if (row > 0 && row < rows - 1 && col < columns - 1 &&
-            _tiles[row + 1, col + 1].Type == currType && _tiles[row - 1, col + 1].Type == currType)
+        if (_tiles[(row + 1) % rows, (col + 1) % columns].Type == currType && 
+            _tiles[(rows + row - 1) % rows, (col + 1) % columns].Type == currType)
         {
             return true;
         }
 
-        if (col > 0 && col < columns - 1 && row > 0 &&
-            _tiles[row - 1, col - 1].Type == currType && _tiles[row - 1, col + 1].Type == currType)
+        if (_tiles[(rows + row - 1) % rows, (columns + col - 1) % columns].Type == currType && 
+            _tiles[(rows + row - 1) % rows, (col + 1) % columns].Type == currType)
         {
             return true;
         }
 
-        if (row > 0 && row < rows - 1 && col > 0 &&
-            _tiles[row + 1, col - 1].Type == currType && _tiles[row - 1, col - 1].Type == currType)
+        if (_tiles[(row + 1) % rows, (columns + col - 1) % columns].Type == currType && 
+            _tiles[(rows + row - 1) % rows, (columns + col - 1) % columns].Type == currType)
         {
             return true;
         }
@@ -571,26 +571,26 @@ public class Board : MonoBehaviour
 
         // z y (x)
         // x x  a
-        if (col > 1 && row < rows - 1 &&
-            _tiles[row + 1, col - 2].Type == currType && _tiles[row + 1, col - 1].Type == currType)
+        if (_tiles[(row + 1) % rows, (columns + col - 2) % columns].Type == currType && 
+            _tiles[(row + 1) % rows, (columns + col - 1) % columns].Type == currType)
         {
             return true;
         }
 
-        if (col < columns - 2 && row < rows - 1 &&
-            _tiles[row + 1, col + 1].Type == currType && _tiles[row + 1, col + 2].Type == currType)
+        if (_tiles[(row + 1) % rows, (col + 1) % columns].Type == currType && 
+            _tiles[(row + 1) % rows, (col + 2) % columns].Type == currType)
         {
             return true;
         }
 
-        if (col < columns - 2 && row > 0 &&
-            _tiles[row - 1, col + 1].Type == currType && _tiles[row - 1, col + 2].Type == currType)
+        if (_tiles[(rows + row - 1) % rows, (col + 1) % columns].Type == currType && 
+            _tiles[(rows + row - 1) % rows, (col + 2) % columns].Type == currType)
         {
             return true;
         }
 
-        if (col > 1 && row > 0 &&
-            _tiles[row - 1, col - 2].Type == currType && _tiles[row - 1, col - 1].Type == currType)
+        if (_tiles[(rows + row - 1) % rows, (columns + col - 2) % columns].Type == currType && 
+            _tiles[(rows + row - 1) % rows, (columns + col - 1) % columns].Type == currType)
         {
             return true;
         }
@@ -607,26 +607,26 @@ public class Board : MonoBehaviour
         // y (x)
         // x  a
         // x  z
-        if (row < rows - 2 && col > 0 &&
-            _tiles[row + 1, col - 1].Type == currType && _tiles[row + 2, col - 1].Type == currType)
+        if (_tiles[(row + 1) % rows, (columns + col - 1) % columns].Type == currType && 
+            _tiles[(row + 2) % rows, (columns + col - 1) % columns].Type == currType)
         {
             return true;
         }
 
-        if (row < rows - 2 && col < columns - 1 &&
-            _tiles[row + 1, col + 1].Type == currType && _tiles[row + 2, col + 1].Type == currType)
+        if (_tiles[(row + 1) % rows, (col + 1) % columns].Type == currType && 
+            _tiles[(row + 2) % rows, (col + 1) % columns].Type == currType)
         {
             return true;
         }
 
-        if (row > 1 && col < columns - 1 &&
-            _tiles[row - 1, col + 1].Type == currType && _tiles[row - 2, col + 1].Type == currType)
+        if (_tiles[(rows + row - 1) % rows, (col + 1) % columns].Type == currType && 
+            _tiles[(rows + row - 2) % rows, (col + 1) % columns].Type == currType)
         {
             return true;
         }
 
-        if (row > 1 && col > 0 &&
-            _tiles[row - 1, col - 1].Type == currType && _tiles[row - 2, col - 1].Type == currType)
+        if (_tiles[(rows + row - 1) % rows, (columns + col - 1) % columns].Type == currType && 
+            _tiles[(rows + row - 2) % rows, (columns + col - 1) % columns].Type == currType)
         {
             return true;
         }
@@ -640,39 +640,40 @@ public class Board : MonoBehaviour
 
         for (int row = 0; row < rows; row++)
         {
-            int counter = 0;
-            TileType type = TileType.Apple;
-
             for (int col = 0; col < columns; col++)
             {
-                if (type == _tiles[row, col].Type)
+                if (!_tiles[row, col].ToBeDestroyed)
                 {
-                    counter++;
-                }
-                else
-                {
-                    type = _tiles[row, col].Type;
-                    counter = 1;
-                }
+                    int counter = 2;
+                    int index = (col + 1) % columns;
+                    TileType type = _tiles[row, col].Type;
 
-                if (counter == 3)
-                {
-                    matchedTiles.Add(_tiles[row, col - 2]);
-                    matchedTiles.Add(_tiles[row, col - 1]);
-                    matchedTiles.Add(_tiles[row, col]);
+                    while (type == _tiles[row, index].Type && index != col)
+                    {
+                        if (counter == 3)
+                        {
+                            Debug.Log("hey hey");
+                            matchedTiles.Add(_tiles[row, (columns + index - 2) % columns]);
+                            matchedTiles.Add(_tiles[row, (columns + index - 1) % columns]);
+                            matchedTiles.Add(_tiles[row, index]);
 
-                    _tiles[row, col - 2].ToBeDestroyed = true;
-                    _tiles[row, col - 1].ToBeDestroyed = true;
-                    _tiles[row, col].ToBeDestroyed = true;
+                            _tiles[row, (columns + index - 2) % columns].ToBeDestroyed = true;
+                            _tiles[row, (columns + index - 1) % columns].ToBeDestroyed = true;
+                            _tiles[row, index].ToBeDestroyed = true;
 
-                    _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
-                }
-                else if (counter > 3)
-                {
-                    matchedTiles.Add(_tiles[row, col]);
-                    _tiles[row, col].ToBeDestroyed = true;
+                            _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
+                        }
+                        else if (counter > 3)
+                        {
+                            matchedTiles.Add(_tiles[row, index]);
+                            _tiles[row, index].ToBeDestroyed = true;
 
-                    _matchedTiles.Peek().Add(_tiles[row, col]);
+                            _matchedTiles.Peek().Add(_tiles[row, index]);
+                        }
+
+                        counter++;
+                        index = (index + 1) % columns;
+                    }
                 }
             }
         }
@@ -686,38 +687,40 @@ public class Board : MonoBehaviour
 
         for (int col = 0; col < columns; col++)
         {
-            int counter = 0;
-            TileType type = TileType.Apple;
-
             for (int row = 0; row < rows; row++)
             {
-                if (type == _tiles[row, col].Type)
+                if (!_tiles[row, col].ToBeDestroyed)
                 {
-                    counter++;
-                }
-                else
-                {
-                    type = _tiles[row, col].Type;
-                    counter = 1;
-                }
+                    int counter = 2;
+                    int index = (row + 1) % rows;
+                    TileType type = _tiles[row, col].Type;
 
-                if (counter == 3)
-                {
-                    matchedTiles.Add(_tiles[row - 2, col]);
-                    matchedTiles.Add(_tiles[row - 1, col]);
-                    matchedTiles.Add(_tiles[row, col]);
+                    while (type == _tiles[index, col].Type && index != row)
+                    {
+                        if (counter == 3)
+                        {
 
-                    _tiles[row - 2, col].ToBeDestroyed = true;
-                    _tiles[row - 1, col].ToBeDestroyed = true;
-                    _tiles[row, col].ToBeDestroyed = true;
+                            matchedTiles.Add(_tiles[(rows + index - 2) % rows, col]);
+                            matchedTiles.Add(_tiles[(rows + index - 1) % rows, col]);
+                            matchedTiles.Add(_tiles[index, col]);
 
-                    _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
-                }
-                else if (counter > 3)
-                {
-                    matchedTiles.Add(_tiles[row, col]);
-                    _tiles[row, col].ToBeDestroyed = true;
-                    _matchedTiles.Peek().Add(_tiles[row, col]);
+                            _tiles[(rows + index - 2) % rows, col].ToBeDestroyed = true;
+                            _tiles[(rows + index - 1) % rows, col].ToBeDestroyed = true;
+                            _tiles[index, col].ToBeDestroyed = true;
+
+                            _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
+                        }
+                        else if (counter > 3)
+                        {
+                            matchedTiles.Add(_tiles[index, col]);
+                            _tiles[index, col].ToBeDestroyed = true;
+
+                            _matchedTiles.Peek().Add(_tiles[index, col]);
+                        }
+
+                        counter++;
+                        index = (index + 1) % rows;
+                    }
                 }
             }
         }
@@ -812,7 +815,7 @@ public class Board : MonoBehaviour
         {
             for (int j = Mathf.Max(0, col - 1); j <= Mathf.Min(columns - 1, col + 1); j++)
             {
-                if (_tiles[row, col].Equals(_tiles[i, j]) || _tiles[row, col].IsAdjecentTo(_tiles[i, j]))
+                if (_tiles[row, col].Equals(_tiles[i, j]) || AreTilesAdjecent(_tiles[row, col], _tiles[i, j]))
                 {
                     availableTypes.Remove(_tiles[i, j].Type);
                 }
@@ -858,5 +861,14 @@ public class Board : MonoBehaviour
         _state = BoardState.GameOver;
         timesUpField.SetActive(true);
         ShakeTiles();
+    }
+
+    private bool AreTilesAdjecent(Tile t1, Tile t2)
+    {
+        return t1.IsAdjecentTo(t2) ||
+            (t1.Position.x == 0 && t2.Position.x == columns - 1 && t1.Position.y == t2.Position.y) ||
+            (t1.Position.x == columns - 1 && t2.Position.x == 0 && t1.Position.y == t2.Position.y) ||
+            (t1.Position.y == 0 && t2.Position.y == rows - 1 && t1.Position.x == t2.Position.x) ||
+            (t1.Position.y == rows - 1 && t2.Position.y == 0 && t1.Position.x == t2.Position.x);
     }
 }
