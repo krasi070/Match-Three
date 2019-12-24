@@ -567,6 +567,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bfff3cd49d221a048a77310fbda9a610, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  wrapAround: 1
   rows: 8
   columns: 8
   numberOfTypes: 7

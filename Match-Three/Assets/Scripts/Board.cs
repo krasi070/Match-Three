@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class Board : MonoBehaviour
 {
+    public bool wrapAround;
     public int rows;
     public int columns;
     public int numberOfTypes;
@@ -19,11 +20,11 @@ public class Board : MonoBehaviour
 
     private const string SelectEffectName = "SelectEffect";
     private const string HoverEffectName = "HoverEffect";
-    private const int StartingThreeMatchPoints = 10;
+    private const int StartingPointsPerTile = 5;
     private const float StartingThreeMatchSeconds = 5f;
 
-    private int _threeMatchPoints = 10;
-    private float _threeMatchSeconds = 5f;
+    private int _pointsPerTile = StartingPointsPerTile;
+    private float _threeMatchSeconds = StartingThreeMatchSeconds;
 
     private Tile _selectedTile;
     private Tile[] _lastSwap;
@@ -69,7 +70,7 @@ public class Board : MonoBehaviour
                 SetLevel(1);
                 _points = 0;
                 scoreTracker.UpdateScore(_points);
-                _threeMatchPoints = StartingThreeMatchPoints;
+                _pointsPerTile = StartingPointsPerTile;
                 _threeMatchSeconds = StartingThreeMatchSeconds;
                 timer.ResetTimeLeft();
             }
@@ -344,7 +345,17 @@ public class Board : MonoBehaviour
 
         if (_currMovingTiles == 0)
         {
-            IEnumerable<Tile> matches = GetHorizontalMatches().Union(GetVerticalMatches());
+            IEnumerable<Tile> matches;
+
+            if (wrapAround)
+            {
+                matches = GetHorizontalMatchesWrapAround().Union(GetVerticalMatchesWrapAround());
+            }
+            else
+            {
+                matches = GetHorizontalMatches().Union(GetVerticalMatches());
+            }
+
             _tilesToDestroy += matches.Count();
 
             if (_tilesToDestroy > 0)
@@ -485,12 +496,25 @@ public class Board : MonoBehaviour
         {
             for (int col = 0; col < columns; col++)
             {
-                if (PossibleMatchInLine(_tiles[row, col]) ||
-                    PossibleMatchXShape(_tiles[row, col]) ||
-                    PossibleMatchLyingL(_tiles[row, col]) ||
-                    PossibleMatchStandingL(_tiles[row, col]))
+                if (wrapAround)
                 {
-                    _hints.Add(_tiles[row, col]);
+                    if (PossibleMatchInLineWrapAround(_tiles[row, col]) ||
+                        PossibleMatchXShapeWrapAround(_tiles[row, col]) ||
+                        PossibleMatchLyingLWrapAround(_tiles[row, col]) ||
+                        PossibleMatchStandingLWrapAround(_tiles[row, col]))
+                    {
+                        _hints.Add(_tiles[row, col]);
+                    }
+                }
+                else
+                {
+                    if (PossibleMatchInLine(_tiles[row, col]) ||
+                        PossibleMatchXShape(_tiles[row, col]) ||
+                        PossibleMatchLyingL(_tiles[row, col]) ||
+                        PossibleMatchStandingL(_tiles[row, col]))
+                    {
+                        _hints.Add(_tiles[row, col]);
+                    }
                 }
             }
         }
@@ -499,6 +523,142 @@ public class Board : MonoBehaviour
     }
 
     private bool PossibleMatchInLine(Tile tile)
+    {
+        int row = tile.Position.y;
+        int col = tile.Position.x;
+        TileType currType = tile.Type;
+
+        // (x) y x x
+        if (col > 2 && _tiles[row, col - 2].Type == currType && _tiles[row, col - 3].Type == currType)
+        {
+            return true;
+        }
+
+        if (row < rows - 3 && _tiles[row + 2, col].Type == currType && _tiles[row + 3, col].Type == currType)
+        {
+            return true;
+        }
+
+        if (col < columns - 3 && _tiles[row, col + 2].Type == currType && _tiles[row, col + 3].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 2 && _tiles[row - 2, col].Type == currType && _tiles[row - 3, col].Type == currType)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool PossibleMatchXShape(Tile tile)
+    {
+        int row = tile.Position.y;
+        int col = tile.Position.x;
+        TileType currType = tile.Type;
+
+        // z (x) a 
+        // x  y  x
+        if (col > 0 && col < columns - 1 && row < rows - 1 &&
+            _tiles[row + 1, col - 1].Type == currType && _tiles[row + 1, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 0 && row < rows - 1 && col < columns - 1 &&
+            _tiles[row + 1, col + 1].Type == currType && _tiles[row - 1, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (col > 0 && col < columns - 1 && row > 0 &&
+            _tiles[row - 1, col - 1].Type == currType && _tiles[row - 1, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 0 && row < rows - 1 && col > 0 &&
+            _tiles[row + 1, col - 1].Type == currType && _tiles[row - 1, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool PossibleMatchLyingL(Tile tile)
+    {
+        int row = tile.Position.y;
+        int col = tile.Position.x;
+        TileType currType = tile.Type;
+
+        // z y (x)
+        // x x  a
+        if (col > 1 && row < rows - 1 &&
+            _tiles[row + 1, col - 2].Type == currType && _tiles[row + 1, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (col < columns - 2 && row < rows - 1 &&
+            _tiles[row + 1, col + 1].Type == currType && _tiles[row + 1, col + 2].Type == currType)
+        {
+            return true;
+        }
+
+        if (col < columns - 2 && row > 0 &&
+            _tiles[row - 1, col + 1].Type == currType && _tiles[row - 1, col + 2].Type == currType)
+        {
+            return true;
+        }
+
+        if (col > 1 && row > 0 &&
+            _tiles[row - 1, col - 2].Type == currType && _tiles[row - 1, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool PossibleMatchStandingL(Tile tile)
+    {
+        int row = tile.Position.y;
+        int col = tile.Position.x;
+        TileType currType = tile.Type;
+
+        // y (x)
+        // x  a
+        // x  z
+        if (row < rows - 2 && col > 0 &&
+            _tiles[row + 1, col - 1].Type == currType && _tiles[row + 2, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row < rows - 2 && col < columns - 1 &&
+            _tiles[row + 1, col + 1].Type == currType && _tiles[row + 2, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 1 && col < columns - 1 &&
+            _tiles[row - 1, col + 1].Type == currType && _tiles[row - 2, col + 1].Type == currType)
+        {
+            return true;
+        }
+
+        if (row > 1 && col > 0 &&
+            _tiles[row - 1, col - 1].Type == currType && _tiles[row - 2, col - 1].Type == currType)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool PossibleMatchInLineWrapAround(Tile tile)
     {
         int row = tile.Position.y;
         int col = tile.Position.x;
@@ -528,7 +688,7 @@ public class Board : MonoBehaviour
         return false;
     }
 
-    private bool PossibleMatchXShape(Tile tile)
+    private bool PossibleMatchXShapeWrapAround(Tile tile)
     {
         int row = tile.Position.y;
         int col = tile.Position.x;
@@ -563,7 +723,7 @@ public class Board : MonoBehaviour
         return false;
     }
 
-    private bool PossibleMatchLyingL(Tile tile)
+    private bool PossibleMatchLyingLWrapAround(Tile tile)
     {
         int row = tile.Position.y;
         int col = tile.Position.x;
@@ -598,7 +758,7 @@ public class Board : MonoBehaviour
         return false;
     }
 
-    private bool PossibleMatchStandingL(Tile tile)
+    private bool PossibleMatchStandingLWrapAround(Tile tile)
     {
         int row = tile.Position.y;
         int col = tile.Position.x;
@@ -640,40 +800,39 @@ public class Board : MonoBehaviour
 
         for (int row = 0; row < rows; row++)
         {
+            int counter = 0;
+            TileType type = TileType.Apple;
+
             for (int col = 0; col < columns; col++)
             {
-                if (!_tiles[row, col].ToBeDestroyed)
+                if (type == _tiles[row, col].Type)
                 {
-                    int counter = 2;
-                    int index = (col + 1) % columns;
-                    TileType type = _tiles[row, col].Type;
+                    counter++;
+                }
+                else
+                {
+                    type = _tiles[row, col].Type;
+                    counter = 1;
+                }
 
-                    while (type == _tiles[row, index].Type && index != col)
-                    {
-                        if (counter == 3)
-                        {
-                            Debug.Log("hey hey");
-                            matchedTiles.Add(_tiles[row, (columns + index - 2) % columns]);
-                            matchedTiles.Add(_tiles[row, (columns + index - 1) % columns]);
-                            matchedTiles.Add(_tiles[row, index]);
+                if (counter == 3)
+                {
+                    matchedTiles.Add(_tiles[row, col - 2]);
+                    matchedTiles.Add(_tiles[row, col - 1]);
+                    matchedTiles.Add(_tiles[row, col]);
 
-                            _tiles[row, (columns + index - 2) % columns].ToBeDestroyed = true;
-                            _tiles[row, (columns + index - 1) % columns].ToBeDestroyed = true;
-                            _tiles[row, index].ToBeDestroyed = true;
+                    _tiles[row, col - 2].ToBeDestroyed = true;
+                    _tiles[row, col - 1].ToBeDestroyed = true;
+                    _tiles[row, col].ToBeDestroyed = true;
 
-                            _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
-                        }
-                        else if (counter > 3)
-                        {
-                            matchedTiles.Add(_tiles[row, index]);
-                            _tiles[row, index].ToBeDestroyed = true;
+                    _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
+                }
+                else if (counter > 3)
+                {
+                    matchedTiles.Add(_tiles[row, col]);
+                    _tiles[row, col].ToBeDestroyed = true;
 
-                            _matchedTiles.Peek().Add(_tiles[row, index]);
-                        }
-
-                        counter++;
-                        index = (index + 1) % columns;
-                    }
+                    _matchedTiles.Peek().Add(_tiles[row, col]);
                 }
             }
         }
@@ -687,40 +846,142 @@ public class Board : MonoBehaviour
 
         for (int col = 0; col < columns; col++)
         {
+            int counter = 0;
+            TileType type = TileType.Apple;
+
             for (int row = 0; row < rows; row++)
             {
-                if (!_tiles[row, col].ToBeDestroyed)
+                if (type == _tiles[row, col].Type)
                 {
-                    int counter = 2;
-                    int index = (row + 1) % rows;
-                    TileType type = _tiles[row, col].Type;
+                    counter++;
+                }
+                else
+                {
+                    type = _tiles[row, col].Type;
+                    counter = 1;
+                }
 
-                    while (type == _tiles[index, col].Type && index != row)
+                if (counter == 3)
+                {
+                    matchedTiles.Add(_tiles[row - 2, col]);
+                    matchedTiles.Add(_tiles[row - 1, col]);
+                    matchedTiles.Add(_tiles[row, col]);
+
+                    _tiles[row - 2, col].ToBeDestroyed = true;
+                    _tiles[row - 1, col].ToBeDestroyed = true;
+                    _tiles[row, col].ToBeDestroyed = true;
+
+                    _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
+                }
+                else if (counter > 3)
+                {
+                    matchedTiles.Add(_tiles[row, col]);
+                    _tiles[row, col].ToBeDestroyed = true;
+                    _matchedTiles.Peek().Add(_tiles[row, col]);
+                }
+            }
+        }
+
+        return matchedTiles;
+    }
+
+    private ICollection<Tile> GetHorizontalMatchesWrapAround()
+    {
+        ICollection<Tile> matchedTiles = new List<Tile>();
+
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < columns; col++)
+            {
+                int counter = 2;
+                int index = (col + 1) % columns;
+                TileType type = _tiles[row, col].Type;
+
+                while (type == _tiles[row, index].Type && index != col)
+                {
+                    if (counter == 3)
                     {
-                        if (counter == 3)
-                        {
+                        matchedTiles.Add(_tiles[row, (columns + index - 2) % columns]);
+                        matchedTiles.Add(_tiles[row, (columns + index - 1) % columns]);
+                        matchedTiles.Add(_tiles[row, index]);
 
-                            matchedTiles.Add(_tiles[(rows + index - 2) % rows, col]);
-                            matchedTiles.Add(_tiles[(rows + index - 1) % rows, col]);
-                            matchedTiles.Add(_tiles[index, col]);
+                        _tiles[row, (columns + index - 2) % columns].ToBeDestroyed = true;
+                        _tiles[row, (columns + index - 1) % columns].ToBeDestroyed = true;
+                        _tiles[row, index].ToBeDestroyed = true;
 
-                            _tiles[(rows + index - 2) % rows, col].ToBeDestroyed = true;
-                            _tiles[(rows + index - 1) % rows, col].ToBeDestroyed = true;
-                            _tiles[index, col].ToBeDestroyed = true;
-
-                            _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
-                        }
-                        else if (counter > 3)
-                        {
-                            matchedTiles.Add(_tiles[index, col]);
-                            _tiles[index, col].ToBeDestroyed = true;
-
-                            _matchedTiles.Peek().Add(_tiles[index, col]);
-                        }
-
-                        counter++;
-                        index = (index + 1) % rows;
+                        _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
                     }
+                    else if (counter > 3)
+                    {
+                        matchedTiles.Add(_tiles[row, index]);
+                        _tiles[row, index].ToBeDestroyed = true;
+
+                        _matchedTiles.Peek().Add(_tiles[row, index]);
+                    }
+
+                    counter++;
+                    index = (index + 1) % columns;
+                }
+
+                if (index <= col)
+                {
+                    break;
+                }
+                else
+                {
+                    col = (columns + index - 1) % columns;
+                }
+            }
+        }
+
+        return matchedTiles;
+    }
+
+    private ICollection<Tile> GetVerticalMatchesWrapAround()
+    {
+        ICollection<Tile> matchedTiles = new List<Tile>();
+
+        for (int col = 0; col < columns; col++)
+        {
+            for (int row = 0; row < rows; row++)
+            {
+                int counter = 2;
+                int index = (row + 1) % rows;
+                TileType type = _tiles[row, col].Type;
+
+                while (type == _tiles[index, col].Type && index != row)
+                {
+                    if (counter == 3)
+                    {
+                        matchedTiles.Add(_tiles[(rows + index - 2) % rows, col]);
+                        matchedTiles.Add(_tiles[(rows + index - 1) % rows, col]);
+                        matchedTiles.Add(_tiles[index, col]);
+
+                        _tiles[(rows + index - 2) % rows, col].ToBeDestroyed = true;
+                        _tiles[(rows + index - 1) % rows, col].ToBeDestroyed = true;
+                        _tiles[index, col].ToBeDestroyed = true;
+
+                        _matchedTiles.Enqueue(new List<Tile>(matchedTiles.Skip(matchedTiles.Count - 3)));
+                    }
+                    else if (counter > 3)
+                    {
+                        matchedTiles.Add(_tiles[index, col]);
+                        _tiles[index, col].ToBeDestroyed = true;
+
+                        _matchedTiles.Peek().Add(_tiles[index, col]);
+                    }
+
+                    counter++;
+                    index = (index + 1) % rows;
+                }
+
+                if (index <= row)
+                {
+                    break;
+                }
+                else
+                {
+                    row = (rows + index - 1) % rows;
                 }
             }
         }
@@ -733,7 +994,7 @@ public class Board : MonoBehaviour
         while (_matchedTiles.Count > 0)
         {
             List<Tile> currMatch = _matchedTiles.Dequeue();
-            int pointsToGive = (currMatch.Count - 2) * _threeMatchPoints * _multiplier;
+            int pointsPerTile = _pointsPerTile + ((_multiplier - 1) * _pointsPerTile / 2);
 
             float secondsToAdd = (_threeMatchSeconds + currMatch.Count - 3) / _multiplier;
             timer.AddSeconds(secondsToAdd);
@@ -741,12 +1002,15 @@ public class Board : MonoBehaviour
             Vector3 pointsTextPos = Vector3.Lerp(
                 currMatch[0].transform.position, currMatch[currMatch.Count - 1].transform.position, 0.5f);
 
-            GameObject pointsText = new GameObject(pointsToGive.ToString());
-            pointsText.transform.SetParent(_canvas.transform);
-            pointsText.transform.position = pointsTextPos + Vector3.back;
-            pointsText.AddComponent<Points>().Init(pointsToGive.ToString());
+            foreach (Tile tile in currMatch)
+            {
+                GameObject pointsText = new GameObject(pointsPerTile.ToString());
+                pointsText.transform.SetParent(_canvas.transform);
+                pointsText.transform.position = tile.transform.position + Vector3.back;
+                pointsText.AddComponent<Points>().Init(pointsPerTile.ToString());
+            }
 
-            _points += pointsToGive;
+            _points += pointsPerTile * currMatch.Count;
             _multiplier++;
         }
     }
@@ -773,6 +1037,25 @@ public class Board : MonoBehaviour
                 if (counter > 2)
                 {
                     _tiles[row, col].Type = GetNewRandomType(row, col);
+                    counter = 0;
+                }
+            }
+
+            if (wrapAround)
+            {
+                if (type == _tiles[row, 0].Type)
+                {
+                    counter++;
+                }
+
+                if (type == _tiles[row, 1].Type)
+                {
+                    counter++;
+                }
+
+                if (counter > 2)
+                {
+                    _tiles[row, columns - 1].Type = GetNewRandomType(row, columns - 1);
                     counter = 0;
                 }
             }
@@ -804,6 +1087,25 @@ public class Board : MonoBehaviour
                     counter = 0;
                 }
             }
+
+            if (wrapAround)
+            {
+                if (type == _tiles[0, col].Type)
+                {
+                    counter++;
+                }
+
+                if (type == _tiles[1, col].Type)
+                {
+                    counter++;
+                }
+
+                if (counter > 2)
+                {
+                    _tiles[rows - 1, col].Type = GetNewRandomType(rows - 1, col);
+                    counter = 0;
+                }
+            }
         }
     }
 
@@ -811,13 +1113,14 @@ public class Board : MonoBehaviour
     {
         List<TileType> availableTypes = new List<TileType>(_types);
 
-        for (int i = Mathf.Max(0, row - 1); i <= Mathf.Min(rows - 1, row + 1); i++)
+        for (int i = row - 1; i <= row + 1; i++)
         {
-            for (int j = Mathf.Max(0, col - 1); j <= Mathf.Min(columns - 1, col + 1); j++)
+            for (int j = col - 1; j <= col + 1; j++)
             {
-                if (_tiles[row, col].Equals(_tiles[i, j]) || AreTilesAdjecent(_tiles[row, col], _tiles[i, j]))
+                if (_tiles[row, col].Equals(_tiles[(rows + i) % rows, (columns + j) % columns]) || 
+                    AreTilesAdjecent(_tiles[row, col], _tiles[(rows + i) % rows, (columns + j) % columns]))
                 {
-                    availableTypes.Remove(_tiles[i, j].Type);
+                    availableTypes.Remove(_tiles[(rows + i) % rows, (columns + j) % columns].Type);
                 }
             }
         }
@@ -850,7 +1153,7 @@ public class Board : MonoBehaviour
     private void GoToNextLevel()
     {
         SetLevel(_level + 1);
-        _threeMatchPoints += 5;
+        _pointsPerTile += 1;
         _threeMatchSeconds = Mathf.Max(_threeMatchSeconds - 0.25f, 1f);
         timer.ResetTimeLeft();
         timer.Resume();
@@ -865,10 +1168,17 @@ public class Board : MonoBehaviour
 
     private bool AreTilesAdjecent(Tile t1, Tile t2)
     {
-        return t1.IsAdjecentTo(t2) ||
-            (t1.Position.x == 0 && t2.Position.x == columns - 1 && t1.Position.y == t2.Position.y) ||
-            (t1.Position.x == columns - 1 && t2.Position.x == 0 && t1.Position.y == t2.Position.y) ||
-            (t1.Position.y == 0 && t2.Position.y == rows - 1 && t1.Position.x == t2.Position.x) ||
-            (t1.Position.y == rows - 1 && t2.Position.y == 0 && t1.Position.x == t2.Position.x);
+        if (wrapAround)
+        {
+            return t1.IsAdjecentTo(t2) ||
+                (t1.Position.x == 0 && t2.Position.x == columns - 1 && t1.Position.y == t2.Position.y) ||
+                (t1.Position.x == columns - 1 && t2.Position.x == 0 && t1.Position.y == t2.Position.y) ||
+                (t1.Position.y == 0 && t2.Position.y == rows - 1 && t1.Position.x == t2.Position.x) ||
+                (t1.Position.y == rows - 1 && t2.Position.y == 0 && t1.Position.x == t2.Position.x);
+        }
+        else
+        {
+            return t1.IsAdjecentTo(t2);
+        }
     }
 }
