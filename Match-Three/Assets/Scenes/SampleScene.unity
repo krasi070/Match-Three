@@ -567,9 +567,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bfff3cd49d221a048a77310fbda9a610, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rows: 7
-  columns: 7
-  numberOfTypes: 6
+  rows: 8
+  columns: 8
+  numberOfTypes: 7
   swapDuration: 0.2
   fallDurationPerTile: 0.125
   scoreTracker: {fileID: 1731355569}
@@ -2049,7 +2049,7 @@ GameObject:
   - component: {fileID: 1543815116}
   - component: {fileID: 1543815115}
   m_Layer: 5
-  m_Name: Button
+  m_Name: HintButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2110,10 +2110,10 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_NormalColor: {r: 0.9568628, g: 0.9568628, b: 0.9568628, a: 1}
+    m_HighlightedColor: {r: 0.9568628, g: 0.9568628, b: 0.9568628, a: 1}
+    m_PressedColor: {r: 0.9568628, g: 0.9568628, b: 0.9568628, a: 1}
+    m_SelectedColor: {r: 0.9568628, g: 0.9568628, b: 0.9568628, a: 1}
     m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
