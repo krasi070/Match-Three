@@ -55,6 +55,11 @@ public class Board : MonoBehaviour
         SetTileTypes();
         SetTileDimensions();
 
+        if (wrapAround)
+        {
+            SetCovers();
+        }
+
         InitTiles();
         RemoveHorizontalMatchesAfterInit();
         RemoveVerticalMatchesAfterInit();
@@ -100,6 +105,41 @@ public class Board : MonoBehaviour
         AddEventsToTimer();
     }
 
+    private void SetCovers()
+    {
+        Sprite coverSprite = Resources.Load<Sprite>("Sprites/cover");
+        float coverSpriteWidth = coverSprite.bounds.size.x;
+        float coverSpriteHeight = coverSprite.bounds.size.y;
+
+        GameObject bottomCover = new GameObject("BottomCover");
+        bottomCover.transform.position = new Vector3(0f, -(_tileHeight * rows / 2 + _tileHeight / 2), -1f);
+        bottomCover.transform.localScale = new Vector3(columns * (_tileWidth / coverSpriteWidth), 1f, 1f);
+        SpriteRenderer bottomRenderer = bottomCover.AddComponent<SpriteRenderer>();
+        bottomRenderer.sprite = coverSprite;
+        bottomRenderer.color = new Color(Camera.main.backgroundColor.r, Camera.main.backgroundColor.g, Camera.main.backgroundColor.b, 1f);
+
+        GameObject topCover = new GameObject("TopCover");
+        topCover.transform.position = new Vector3(0f, _tileHeight * rows / 2 + _tileHeight / 2, -1f);
+        topCover.transform.localScale = new Vector3(columns * (_tileWidth / coverSpriteWidth), 1f, 1f);
+        SpriteRenderer topRenderer = topCover.AddComponent<SpriteRenderer>();
+        topRenderer.sprite = coverSprite;
+        topRenderer.color = new Color(Camera.main.backgroundColor.r, Camera.main.backgroundColor.g, Camera.main.backgroundColor.b, 1f);
+
+        GameObject leftCover = new GameObject("LeftCover");
+        leftCover.transform.position = new Vector3(-(_tileWidth * columns / 2 + _tileWidth / 2), 0f, -1f);
+        leftCover.transform.localScale = new Vector3(1f, rows * (_tileHeight / coverSpriteHeight), 1f);
+        SpriteRenderer leftRenderer = leftCover.AddComponent<SpriteRenderer>();
+        leftRenderer.sprite = coverSprite;
+        leftRenderer.color = new Color(Camera.main.backgroundColor.r, Camera.main.backgroundColor.g, Camera.main.backgroundColor.b, 1f);
+
+        GameObject rightCover = new GameObject("RightCover");
+        rightCover.transform.position = new Vector3(_tileWidth * columns / 2 + _tileWidth / 2, 0f, -1f);
+        rightCover.transform.localScale = new Vector3(1f, rows * (_tileHeight / coverSpriteHeight), 1f);
+        SpriteRenderer rightRenderer = rightCover.AddComponent<SpriteRenderer>();
+        rightRenderer.sprite = coverSprite;
+        rightRenderer.color = new Color(Camera.main.backgroundColor.r, Camera.main.backgroundColor.g, Camera.main.backgroundColor.b, 1f);
+    }
+
     private void SetTileTypes()
     {
         _types = System.Enum.GetValues(typeof(TileType))
@@ -132,17 +172,21 @@ public class Board : MonoBehaviour
 
     private Tile CreateTile(int row, int col)
     {
-        return CreateTile(row, col, 0);
+        return CreateTile(row, col, 0f);
     }
 
     private Tile CreateTile(int row, int col, float yOffset)
     {
-        TileType randomType = _types[Random.Range(0, _types.Length)];
+        return CreateTile(row, col, yOffset, _types[Random.Range(0, _types.Length)]);
+    }
+
+    private Tile CreateTile(int row, int col, float yOffset, TileType type)
+    {
         GameObject tileObj = new GameObject();
         SpriteRenderer renderer = tileObj.AddComponent<SpriteRenderer>();
 
         Tile tile = tileObj.AddComponent<Tile>();
-        tile.Init(new Vector2Int(col, row), randomType);
+        tile.Init(new Vector2Int(col, row), type);
         AddEventsToTile(tile);
 
         BoxCollider2D collider = tileObj.AddComponent<BoxCollider2D>();
@@ -258,14 +302,73 @@ public class Board : MonoBehaviour
         }
     }
 
+    private void EdgeDragTile(Tile tile)
+    {
+        if (_state == BoardState.InPlay && _selectedTile != null && _selectedTile.Equals(tile) && Input.GetMouseButton(0))
+        {
+            Vector3 mousePos = Input.mousePosition;
+            mousePos.z = -Camera.main.transform.position.z;
+            Vector3 pos = Camera.main.ScreenToWorldPoint(mousePos);
+
+            Tile toSwap = null;
+            Vector3 diff = pos - _selectedTile.transform.position;
+
+            if (_selectedTile.Position.y == rows - 1 && Mathf.Abs(diff.y) > Mathf.Abs(diff.x) && diff.y > 0f)
+            {
+                toSwap = _tiles[0, _selectedTile.Position.x];
+            }
+
+            if (_selectedTile.Position.y == 0 && Mathf.Abs(diff.y) > Mathf.Abs(diff.x) && diff.y < 0f)
+            {
+                toSwap = _tiles[rows - 1, _selectedTile.Position.x];
+            }
+
+            if (_selectedTile.Position.x == columns - 1 && Mathf.Abs(diff.y) < Mathf.Abs(diff.x) && diff.x > 0f)
+            {
+                toSwap = _tiles[_selectedTile.Position.y, 0];
+            }
+
+            if (_selectedTile.Position.x == 0 && Mathf.Abs(diff.y) < Mathf.Abs(diff.x) && diff.x < 0f)
+            {
+                toSwap = _tiles[_selectedTile.Position.y, columns - 1];
+            }
+
+            if (toSwap != null)
+            {
+                if (_selectedTile.transform.childCount > 0)
+                {
+                    Destroy(_selectedTile.transform.GetChild(0).gameObject);
+                }
+
+                if (toSwap.transform.childCount > 0)
+                {
+                    Destroy(toSwap.transform.GetChild(0).gameObject);
+                }
+
+                SwapTiles(_selectedTile, toSwap);
+
+                _selectedTile = null;
+            }
+        }
+    }
+
     private void SwapTiles(Tile t1, Tile t2)
     {
         _state = BoardState.SwappingTiles;
 
         Vector3 t1Pos = t1.transform.position;
-        t1.MoveToPosition(t2.transform.position + Vector3.back, swapDuration);
-        t2.MoveToPosition(t1Pos, swapDuration);
-        _currMovingTiles += 2;
+
+        if (t1.IsAdjecentTo(t2))
+        {
+            t1.MoveToPosition(t2.transform.position + Vector3.back, swapDuration);
+            t2.MoveToPosition(t1Pos, swapDuration);
+            _currMovingTiles += 2;
+        }
+        else
+        {
+            SwapOppositeSideTiles(t1, t2);
+            _currMovingTiles += 4;
+        }
 
         _tiles[t1.Position.y, t1.Position.x] = t2;
         _tiles[t2.Position.y, t2.Position.x] = t1;
@@ -275,6 +378,53 @@ public class Board : MonoBehaviour
         t1.Position = t2Pos;
 
         _lastSwap = new Tile[] { t1, t2 };
+    }
+
+    private void SwapOppositeSideTiles(Tile t1, Tile t2)
+    {
+        Tile temp1 = CreateCopyTempTile(t1, t2);
+        Tile temp2 = CreateCopyTempTile(t2, t1);
+
+        t1.transform.position = temp1.transform.position;
+        temp1.transform.position = GetTileWorldPosition(t1.Position.y, t1.Position.x);
+        t2.transform.position = temp2.transform.position;
+        temp2.transform.position = GetTileWorldPosition(t2.Position.y, t2.Position.x);
+
+        t1.MoveToPosition(temp2.transform.position + Vector3.back, swapDuration);
+        temp2.MoveToPosition(t1.transform.position, swapDuration);
+        t2.MoveToPosition(temp1.transform.position, swapDuration);
+        temp1.MoveToPosition(t2.transform.position + Vector3.back, swapDuration);
+    }
+
+    // Used for swapping tiles on opposite end on the board.
+    // Two tiles are needed to check if it's a corner tile where the temp copy should be place (horizontal or vertical).
+    private Tile CreateCopyTempTile(Tile t1, Tile t2)
+    {
+        Tile temp = null;
+
+        if (t1.Position.x == 0 && t1.Position.y == t2.Position.y)
+        {
+            temp = CreateTile(t1.Position.y, columns, 0f, t1.Type);
+        }
+
+        if (t1.Position.x == columns - 1 && t1.Position.y == t2.Position.y)
+        {
+            temp = CreateTile(t1.Position.y, -1, 0f, t1.Type);
+        }
+
+        if (t1.Position.y == 0 && t1.Position.x == t2.Position.x)
+        {
+            temp = CreateTile(rows, t1.Position.x, 0f, t1.Type);
+        }
+
+        if (t1.Position.y == rows - 1 && t1.Position.x == t2.Position.x)
+        {
+            temp = CreateTile(-1, t1.Position.x, 0f, t1.Type);
+        }
+
+        temp.IsTemp = true;
+
+        return temp;
     }
 
     private void UndoLastSwap()
@@ -293,6 +443,12 @@ public class Board : MonoBehaviour
         tile.OnMouseHover += AddHoverEffect;
         tile.OnMouseHover += DragTile;
         tile.OnMouseExitHover += RemoveHoverEffect;
+
+        if (wrapAround)
+        {
+            tile.OnMouseExitHover += EdgeDragTile;
+        }
+
         tile.AfterMove += CheckForMatches;
         tile.AfterDisappear += DropTiles;
         tile.AfterAppear += () => { _state = _state != BoardState.NoMoreMoves ? BoardState.InPlay : BoardState.NoMoreMoves; };

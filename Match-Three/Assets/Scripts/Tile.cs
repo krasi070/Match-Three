@@ -19,6 +19,11 @@ public class Tile : MonoBehaviour
 
     public bool ToBeDestroyed { get; set; }
 
+    /// <summary>
+    /// Temporary tiles are used for swapping tiles on opposite sides of the board. They are destroyed once the swap is done.
+    /// </summary>
+    public bool IsTemp { get; set; }
+
     public Vector2Int Position { get; set; }
 
     public TileType Type
@@ -113,6 +118,11 @@ public class Tile : MonoBehaviour
 
         transform.position = new Vector3(transform.position.x, transform.position.y);
         AfterMove?.Invoke();
+
+        if (IsTemp)
+        {
+            Destroy(gameObject);
+        }
     }
 
     private IEnumerator Appear(float duration)
